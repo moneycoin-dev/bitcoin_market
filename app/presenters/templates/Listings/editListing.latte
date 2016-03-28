@@ -1,0 +1,9 @@
+{control editForm}
+{var $img = 0 }
+{foreach $listingImages as $listingImg}
+    
+    {dump $img}
+    <img src="{$basePath}/{$listingImg}" width="150" height="150"> 
+    <a n:href="deleteClick! $img"> Delete</a>
+    {$img++}
+{/foreach }

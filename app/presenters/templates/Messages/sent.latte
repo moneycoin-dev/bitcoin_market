@@ -1,0 +1,15 @@
+<center>
+    {if count($sent)}
+        <div id="msgs_new">
+        Odeslané zprávy
+        {foreach $sent as $snd}
+        <div class="post">
+            <a n:href="Messages:view $snd['id']">{$snd['title']}</a> <a n:href="delete! $snd['id']">Smazat</a>
+                {dump $snd}
+        </div>
+        {/foreach}
+    {else}
+        Žádné odeslané zprávy.
+    {/if}
+</div>
+</center>

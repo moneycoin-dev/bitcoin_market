@@ -1,0 +1,17 @@
+{block content}
+<link rel="stylesheet" media="screen" href="http://netdna.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css" />
+<center>
+<h1 n:block=title>Nastavení</h1>
+
+
+{form settingsForm}
+<table>
+    {control $form errors}
+<tr n:foreach="$form->controls as $name => $field">
+    <th>{label $name /}<th>
+    <td>{input $name}</td>
+</tr>
+</table>
+    
+{/form}
+</center>

@@ -1,0 +1,33 @@
+
+
+<center>
+    {if count($unread)}
+        <div id="msgs_new">
+        Nové - nepřečtené zprávy
+        {foreach $unread as $unrd}
+        <div class="post">
+            <a n:href="Messages:view $unrd['id']">{$unrd['title']}</a>
+        </div>
+        {/foreach}
+    {else}
+        Žádné nové zprávy.
+    {/if}
+</div>    
+<br>
+    {if count($read) }
+        <div id="msgs_all">
+            ArchiV:
+            {foreach $read as $red}
+        <div class="post">
+            <a n:href="Messages:view $red['id']">{$red['title']}</a> <a n:href="delete! $red['id']"> Smazat </a>
+                {dump $red}
+        </div>
+        {/foreach}
+    {else}
+        ...
+    {/if}
+</div>
+<br>
+<a n:href="Messages:messagesForm">Odeslat zprávu</a>
+<a n:href="Messages:sent">Odeslané zprávy</a>
+</center>

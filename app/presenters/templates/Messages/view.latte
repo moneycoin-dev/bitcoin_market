@@ -1,0 +1,18 @@
+{dump $msgdata}
+
+<center>
+Zprava od: {$msgdata['login']}
+<br>
+Doručeno v: {$msgdata['timestamp']|date:'Y-m-d H:i:s'}
+<br>
+Text zpravy: {$msgdata['message']}
+<br>
+<br>
+
+{if $reply}
+    {? $presenter->setReply($msgdata); }
+    <a n:href="Messages:messagesForm, odpoved => 1">Odpovědět.</a>
+{/if}
+
+
+<center>

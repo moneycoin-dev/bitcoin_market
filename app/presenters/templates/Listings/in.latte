@@ -1,0 +1,22 @@
+{foreach $flashes as $flash}
+    <div class="flash {$flash->type}">{$flash->message}</div>
+{/foreach}
+
+{if $isVendor}
+    <a href="{$presenter->link('Listings:CreateListing')}"> Create new listing! </a>
+    
+    <br> <br> <br>
+    <h3>Your active listings:</h3>
+    {foreach $listings as $listing}
+        <a n:href="Listings:EditListing $listing->id"> {$listing->product_name} </a>
+        &nbsp;<a href="{link Listings:EditListing $listing->id}"> Edit </a>
+        &nbsp;<a n:href="deleteListing! $listing->id"> Delete </a>
+        <br>
+    {/foreach} 
+{else}
+    <a n:href="vendor!"> Become a Vendor </a>
+{/if}
+    
+
+
+    

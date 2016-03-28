@@ -1,0 +1,19 @@
+{block content}
+<center>
+    
+<h1 n:block=title>Enter captcha</h1>
+
+{form xX}
+<table>
+<tr n:foreach="$form->controls as $name => $field">
+
+    <td>{label $name /}<td>
+    <td>{input $name}</td>
+    <td n:ifcontent>{inputError $name}</td>
+</tr>
+</table>
+
+    
+{/form}
+   
+</center>
