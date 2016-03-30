@@ -80,15 +80,7 @@ class RegisterPresenter extends BasePresenter
             $this->regModel->checkIfUserExists($values['login']);
         } catch(\App\Model\DuplicateNameException $e) {
             $form->addError($e->getMessage());
-        } 
-        
-        if ($values['pass1'] != $values['pass2']){
-            $form->addError("Zadaná hesla se neshodují. Prosím vyplňte své heslo znovu.");
         }
-        
-       // if (strlen($values['pass1']) < 8 || strlen($values['pass2']) < 8){
-       //     $form->addError("Heslo musí být minimálně 8 znaků dlouhé.");
-       // }
     }
 
     public function registerFormSucceeded($form)

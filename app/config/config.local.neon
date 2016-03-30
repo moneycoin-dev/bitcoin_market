@@ -6,7 +6,7 @@ parameters:
         driver: mysql
         host: localhost
         username: root
-        password: fzh5df2ax
+        password: -
         dbname: shop
         lazy: TRUE
 
