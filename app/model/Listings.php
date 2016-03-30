@@ -58,4 +58,8 @@ class Listings extends \DibiRow {
         public function updateListingImages($id, $images){
             dibi::update('listings', array('product_images' => $images))->where('id = %i', $id)->execute();
         }
+        
+        public function viewListing($id){
+            return dibi::select('*')->from('listings')->where('id = %i', $id)->execute();
+        }
 }

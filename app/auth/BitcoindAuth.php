@@ -1,7 +1,6 @@
 <?php
 
 namespace App;
-use Nbobtc\Command\Command;
 
 class BitcoindAuth {
     

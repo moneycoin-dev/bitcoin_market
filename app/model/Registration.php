@@ -8,13 +8,8 @@ class Registration extends \DibiRow
 {
         
         public function createUser($values)
-        {
-            try {           
-                 dibi::query('INSERT INTO [users]',$values);
-            
-            } catch (Dibi\UniqueConstraintViolationException $e) {
-                throw new DuplicateNameException('Zadane jmeno je duplicitni, vyberte prosim jine');
-            }
+        {     
+            dibi::query('INSERT INTO [users]',$values);
         }
         
         public function assignBtcAdress($login, $address){
@@ -23,12 +18,13 @@ class Registration extends \DibiRow
                     ->where('login = %s', $login)->execute();
         }
         
-	/*
-	public function delete()
-        {
-        return dibi::query('DELETE FROM [users] WHERE [id]=%i', $this->id);
-        }
-        */       
+        public function checkIfUserExists($login){
+            $rslt = dibi::select('login')->from('users')->where('login = %s', $login)->fetch();
+            
+            if ($rslt['login']){
+                throw new DuplicateNameException('Zadané jméno již v systému existuje!');
+            }
+        }    
 }
 
 class DuplicateNameException extends \Exception

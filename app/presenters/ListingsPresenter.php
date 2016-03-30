@@ -210,6 +210,14 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->redirect("Listings:editListing", $listingID);
     }
     
+    public $listingDetails;
+    
+    public function actionViewListing($id){
+       $listingDetails = $this->listings->viewListing($id);
+       dump($listingDetails);
+       $this->listingDetails = $listingDetails;
+    }
+    
     public function renderAlert(){
         
     }
@@ -252,10 +260,9 @@ class ListingsPresenter extends ProtectedPresenter {
             $id = $this->returnId();
                          
             //query bitcoind, get response
-            $btcauth = new BTCAuth();
-            $client = $btcauth->btcd;
+            $btcClient = $this->btcClient;
             $command = new Command('getbalance', $login);             
-            $response = $client->sendCommand($command);
+            $response = $btcClient->sendCommand($command);
             $result = json_decode($response->getBody()->getContents(), true);
             
             $section =  $this->getSession()->getSection('balance');
@@ -298,6 +305,9 @@ class ListingsPresenter extends ProtectedPresenter {
            $this->template->listings = $this->listings->getListings($login);
            $this->template->listingImages = $this->getSession()->getSection('images')->listingImages;
            $this->template->listingID = $this->getSession()->getSection('listing')->listingID;
-           $this->template->currentUser = $this->returnLogin();          
+           $this->template->currentUser = $this->returnLogin();  
+           
+           //for single listing view action
+           $this->template->listingDetails = $this->listingDetails;
     }
 }
