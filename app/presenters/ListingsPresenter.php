@@ -2,8 +2,6 @@
 
 namespace App\Presenters;
 
-use Nette;
-use App\BitcoindAuth as BTCAuth;
 use App\Model\Listings;
 use App\Forms\ListingFormFactory;
 use Nbobtc\Command\Command;
@@ -158,7 +156,8 @@ class ListingsPresenter extends ProtectedPresenter {
            $this->actualListingValues = $this->listings->getActualListingValues($id);
         }
         
-        $listingImages = unserialize($this->listings->getListingImages($id)[0]['product_images']);
+        $listingImages = $this->listings->getListingImages($id);
+     //   dump($listingImages);
 
         $imgSession = $this->getSession()->getSection('images');
         $imgSession->listingImages = $listingImages;
@@ -185,7 +184,7 @@ class ListingsPresenter extends ProtectedPresenter {
        $img =  $session->toDelete;
        $listingID = $this->getSession()->getSection('listing')->listingID;
 
-       $imgs = unserialize($this->listings->getListingImages($listingID)[0]['product_images']);
+       $imgs = $this->listings->getListingImages($listingID);
        
        unset($imgs[$img]);
 
@@ -213,9 +212,16 @@ class ListingsPresenter extends ProtectedPresenter {
     public $listingDetails;
     
     public function actionViewListing($id){
-       $listingDetails = $this->listings->viewListing($id);
-       dump($listingDetails);
+       $listingDetails = $this->listings->getActualListingValues($id);
+       $listingImages = $this->listings->getListingImages($id);
+ 
        $this->listingDetails = $listingDetails;
+    }
+    
+    public function handleSetMainImage($imgNum){
+        $listingID = $this->getSession()->getSection('listing')->listingID;
+        
+        $this->listings->setListingMainImage($listingID, $imgNum);
     }
     
     public function renderAlert(){
@@ -225,7 +231,7 @@ class ListingsPresenter extends ProtectedPresenter {
     public $id;
     
     public function editSuccess($form){
-        $id = $this->actualListingValues[0]['id'];
+        $id = $this->actualListingValues['id'];
         $listingID = $this->getSession()->getSection('listing')->listingID;
         $values = $form->getValues();
         
@@ -239,7 +245,7 @@ class ListingsPresenter extends ProtectedPresenter {
                     strpos($image->getTemporaryFile(), "userfiles/")));     
         }
        
-        $existingImages = unserialize($this->listings->getListingImages($listingID)[0]['product_images']);
+        $existingImages = $this->listings->getListingImages($listingID);
         $new_images = serialize(array_merge($imageLocations, $existingImages));
         
         $this->listings->updateListingImages($listingID, $new_images);    
@@ -277,22 +283,22 @@ class ListingsPresenter extends ProtectedPresenter {
                 foreach ($componenty as $comp){
                     switch($comp->name){
                         case 'product_name':
-                            $comp->setValue($this->actualListingValues[0]['product_name']);
+                            $comp->setValue($this->actualListingValues['product_name']);
                             break;
                         case 'product_desc':
-                            $comp->setValue($this->actualListingValues[0]['product_desc']);
+                            $comp->setValue($this->actualListingValues['product_desc']);
                             break;
                         case 'price':
-                            $comp->setValue($this->actualListingValues[0]['price']);
+                            $comp->setValue($this->actualListingValues['price']);
                             break;
                         case 'ships_from':
-                            $comp->setValue($this->actualListingValues[0]['ships_from']);
+                            $comp->setValue($this->actualListingValues['ships_from']);
                             break;
                         case 'ships_to';
-                            $comp->setValue($this->actualListingValues[0]['ships_to']);
+                            $comp->setValue($this->actualListingValues['ships_to']);
                             break;
                         case 'product_type':
-                            $comp->setValue($this->actualListingValues[0]['ships_to']);
+                            $comp->setValue($this->actualListingValues['ships_to']);
                             break;        
                     }
                 }

@@ -8,7 +8,7 @@ use App\Forms\SignFormFactory;
 use Nette\Security as NS;
 use Nbobtc\Command\Command;
 
-class RegisterPresenter extends BasePresenter
+class RegisterPresenter extends GuestPresenter
 {
 
     /** @var Models\Registration */

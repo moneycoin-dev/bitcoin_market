@@ -3,8 +3,6 @@
 namespace App\Model;
 
 use dibi;
-use App\BitcoindAuth as BTCAuth;
-use Nbobtc\Command\Command;
 
 class Listings extends \DibiRow {
     
@@ -44,7 +42,8 @@ class Listings extends \DibiRow {
         }
         
         public function getActualListingValues($id){
-            return dibi::select('*')->from('listings')->where('id = %i', $id)->fetchAll();
+            return dibi::select('id, product_name, product_type, product_desc, price, ships_from, ships_to')
+                    ->from('listings')->where('id = %i', $id)->fetch();
         }
         
         public function getAuthor($id){
@@ -52,14 +51,18 @@ class Listings extends \DibiRow {
         }
         
         public function getListingImages($id){
-            return dibi::select('product_images')->from('listings')->where('id = %i', $id)->fetchAll();
+            return unserialize(dibi::select('product_images')->from('listings')->where('id = %i', $id)->fetch()['product_images']);
         }
         
         public function updateListingImages($id, $images){
             dibi::update('listings', array('product_images' => $images))->where('id = %i', $id)->execute();
         }
         
-        public function viewListing($id){
-            return dibi::select('*')->from('listings')->where('id = %i', $id)->execute();
+        public function setListingMainImage($id, $imgNum){
+            dibi::update('listings', array('main_image' => $imgNum))->where('id = %i', $id)->execute();
+        }
+        
+        public function getListingMainImage($id){
+            return dibi::select('main_image')->from('listings')->where('id = %i', $id)->fetch();
         }
 }

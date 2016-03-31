@@ -1,0 +1,11 @@
+{$listingDetails->product_name}
+{$listingDetails->product_type}
+{$listingDetails->product_desc}
+{$listingDetails->price}
+{$listingDetails->ships_from}
+{$listingDetails->ships_to}
+
+{foreach $listingImages as $image}
+    <img src="{$basePath}/{$image}" width="70" height="70">
+{/foreach}
+
