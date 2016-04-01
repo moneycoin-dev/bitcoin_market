@@ -2,11 +2,19 @@
 
 namespace App\Presenters;
 
+use Nette;
 use App\Model\Listings;
 use App\Forms\ListingFormFactory;
+use App\Forms\VendorNotesFactory;
 use Nbobtc\Command\Command;
 
 class ListingsPresenter extends ProtectedPresenter {
+    
+    protected $URL;
+    
+    public function __construct(Nette\Http\Request $r){
+        $this->URL = $r->getUrl();
+    }
     
     protected $listings;
     
@@ -66,9 +74,14 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     protected $formFactory;
+    protected $vendorNotes;
     
     public function injectListingForm(ListingFormFactory $factory){
         $this->formFactory = $factory;
+    }
+    
+    public function injectVendorNotes(VendorNotesFactory $vendorNotes){
+        $this->vendorNotes = $vendorNotes;
     }
     
     public function createComponentListingForm(){
@@ -157,7 +170,6 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         $listingImages = $this->listings->getListingImages($id);
-     //   dump($listingImages);
 
         $imgSession = $this->getSession()->getSection('images');
         $imgSession->listingImages = $listingImages;
@@ -209,13 +221,54 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->redirect("Listings:editListing", $listingID);
     }
     
-    public $listingDetails;
+    //stores actual listing values into session
+    private function setListingSession($id){
+        $listingDetails = $this->listings->getActualListingValues($id);
+    	$session = $this->getSession()->getSection('listing');
+    	$session->listingDetails = $listingDetails;
+    }
     
-    public function actionViewListing($id){
-       $listingDetails = $this->listings->getActualListingValues($id);
-       $listingImages = $this->listings->getListingImages($id);
- 
-       $this->listingDetails = $listingDetails;
+    public function actionView($id){
+    	
+        $this->setListingSession($id);
+    }
+
+    public function actionBuy($id){
+        
+        $this->setListingSession($id);
+    }
+
+    public function createComponentVendorNotesForm(){
+        
+       $form = $this->vendorNotes->create();
+       
+       $form->onSuccess[] = array($this, 'vendorNotesSuccess');
+       $form->onValidate[] = array($this, 'vendorNotesValidate');
+       
+       return $form;
+    }
+    
+    public function vendorNotesSuccess($form){
+        //redirect user to his order list 
+        //after item succesfully bought
+        
+        $this->flashMessage('Operace proběhla úspěšně.'); 
+        $this->redirect('Orders:in');
+    }
+    
+    public function vendorNotesValidate($form){
+        
+          if ($form['zrusit']->submittedBy) {
+
+          $listingID = $this->getSession()->getSection('listing')->listingDetails->id;   
+          $this->redirect('Listings:view', $listingID);
+          
+          $values = $form->getValues(TRUE);
+  
+        }
+
+        //is submitted data PGP? method placeholder
+        //TODO
     }
     
     public function handleSetMainImage($imgNum){
@@ -224,8 +277,21 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->listings->setListingMainImage($listingID, $imgNum);
     }
     
-    public function renderAlert(){
+    public function createComponentBuyForm(){
+        $form = new Nette\Application\UI\Form;
         
+        $form->addSelect("postage", "Postage options:", array("Stub1", "Stub2"));
+        $form->addSelect("quantity", "Product quantity:", array("Stub1", "Stub2"));
+        $form->addSubmit("koupit", "Koupit");
+        
+        $form->onSuccess[] = array($this, 'buyFormOnSuccess');
+        
+        return $form;
+    }
+    
+    public function buyFormOnSuccess($form){
+        $listingID = $this->getSession()->getSection('listing')->listingDetails->id;
+        $this->redirect("Listings:Buy", $listingID);
     }
     
     public $id;
@@ -262,58 +328,68 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function beforeRender(){
-            $login = $this->getUser()->getIdentity()->login;
-            $id = $this->returnId();
-                         
-            //query bitcoind, get response
-            $btcClient = $this->btcClient;
-            $command = new Command('getbalance', $login);             
-            $response = $btcClient->sendCommand($command);
-            $result = json_decode($response->getBody()->getContents(), true);
-            
-            $section =  $this->getSession()->getSection('balance');
-            $section->balance = $result['result'];
+        
+        $login = $this->getUser()->getIdentity()->login;
+        $id = $this->returnId();
 
-            //render edit form with actual values from database
-            $component_iterator = $this->getComponent("editForm")->getComponents();
-            $componenty = iterator_to_array($component_iterator);
-            
-            if ($this->actualListingValues != null){
-                
-                foreach ($componenty as $comp){
-                    switch($comp->name){
-                        case 'product_name':
-                            $comp->setValue($this->actualListingValues['product_name']);
-                            break;
-                        case 'product_desc':
-                            $comp->setValue($this->actualListingValues['product_desc']);
-                            break;
-                        case 'price':
-                            $comp->setValue($this->actualListingValues['price']);
-                            break;
-                        case 'ships_from':
-                            $comp->setValue($this->actualListingValues['ships_from']);
-                            break;
-                        case 'ships_to';
-                            $comp->setValue($this->actualListingValues['ships_to']);
-                            break;
-                        case 'product_type':
-                            $comp->setValue($this->actualListingValues['ships_to']);
-                            break;        
-                    }
+        //query bitcoind, get response
+        $btcClient = $this->btcClient;
+        $command = new Command('getbalance', $login);             
+        $response = $btcClient->sendCommand($command);
+        $result = json_decode($response->getBody()->getContents(), true);
+
+        $section =  $this->getSession()->getSection('balance');
+        $section->balance = $result['result'];
+
+        //render edit form with actual values from database
+        $component_iterator = $this->getComponent("editForm")->getComponents();
+        $componenty = iterator_to_array($component_iterator);
+
+        if ($this->actualListingValues != null){
+
+            foreach ($componenty as $comp){
+                switch($comp->name){
+                    case 'product_name':
+                        $comp->setValue($this->actualListingValues['product_name']);
+                        break;
+                    case 'product_desc':
+                        $comp->setValue($this->actualListingValues['product_desc']);
+                        break;
+                    case 'price':
+                        $comp->setValue($this->actualListingValues['price']);
+                        break;
+                    case 'ships_from':
+                        $comp->setValue($this->actualListingValues['ships_from']);
+                        break;
+                    case 'ships_to';
+                        $comp->setValue($this->actualListingValues['ships_to']);
+                        break;
+                    case 'product_type':
+                        $comp->setValue($this->actualListingValues['ships_to']);
+                        break;        
                 }
-                
-            } else {
-
             }
-                           
-           $this->template->isVendor = $this->listings->isVendor($id);
-           $this->template->listings = $this->listings->getListings($login);
-           $this->template->listingImages = $this->getSession()->getSection('images')->listingImages;
-           $this->template->listingID = $this->getSession()->getSection('listing')->listingID;
-           $this->template->currentUser = $this->returnLogin();  
-           
-           //for single listing view action
-           $this->template->listingDetails = $this->listingDetails;
+
+        } else {
+
+        }
+        
+        //send variables to template - depends on actual URL
+
+        $urlPath = $this->URL->path;
+
+        if ($urlPath == "/listings/"){
+            $this->template->isVendor = $this->listings->isVendor($id);
+            $this->template->listings = $this->listings->getListings($login);    
+            $this->template->currentUser = $this->returnLogin();          
+        }
+
+        if ( strpos($urlPath, "edit-listing" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
+            $this->template->listingImages = $this->getSession()->getSection('images')->listingImages;
+            $this->template->listingID = $this->getSession()->getSection('listing')->listingID;
+
+            //for single listing view action
+            $this->template->listingDetails = $this->getSession()->getSection('listing')->listingDetails;
+        }
     }
 }

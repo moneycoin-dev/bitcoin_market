@@ -20,7 +20,7 @@ session:
 
 
 services:
-	- App\Forms\SignFormFactory
 	- App\Forms\ListingFormFactory
+	- App\Forms\VendorNotesFactory
 	router: App\RouterFactory::createRouter
        

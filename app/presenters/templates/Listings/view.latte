@@ -1,11 +1,20 @@
 {$listingDetails->product_name}
+<br>
 {$listingDetails->product_type}
+<br>
 {$listingDetails->product_desc}
+<br>
 {$listingDetails->price}
+<br>
 {$listingDetails->ships_from}
+<br>
 {$listingDetails->ships_to}
 
 {foreach $listingImages as $image}
     <img src="{$basePath}/{$image}" width="70" height="70">
 {/foreach}
+
+{control buyForm}
+
+
 

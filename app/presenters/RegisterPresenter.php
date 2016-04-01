@@ -4,7 +4,6 @@ namespace App\Presenters;
 
 use Nette;
 use App\Model\Registration;
-use App\Forms\SignFormFactory;
 use Nette\Security as NS;
 use Nbobtc\Command\Command;
 
