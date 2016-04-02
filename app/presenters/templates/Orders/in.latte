@@ -1,0 +1,9 @@
+{if $orders}
+{foreach $orders as $order}
+{dump $order}
+Product: {$order->product_name}
+Datum: {$order->date_ordered}
+{/foreach}
+{else}
+Nemáte žádné objednávky!
+{/if}

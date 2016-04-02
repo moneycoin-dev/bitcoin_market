@@ -4,6 +4,7 @@ namespace App\Presenters;
 
 use Nette;
 use App\Model\Listings;
+use App\Model\Orders;
 use App\Forms\ListingFormFactory;
 use App\Forms\VendorNotesFactory;
 use Nbobtc\Command\Command;
@@ -11,8 +12,12 @@ use Nbobtc\Command\Command;
 class ListingsPresenter extends ProtectedPresenter {
     
     protected $URL;
+    protected $request;
     
     public function __construct(Nette\Http\Request $r){
+        parent::__construct();
+        
+        $this->request = $r; 
         $this->URL = $r->getUrl();
     }
     
@@ -71,6 +76,12 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function injectBaseModels(Listings $list){
         $this->listings = $list;
+    }
+    
+    protected $orders;
+    
+    public function injectOrders(Orders $o){
+        $this->orders = $o;
     }
     
     protected $formFactory;
@@ -229,13 +240,53 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function actionView($id){
+        
+        //URL not wanted
+        $n = "/listings/view";
+        
+        //catch corner cases
+        if (is_null($id)){
+            $this->redirect("Dashboard:in");
+        }
+         
+        else if ($this->URL == $n){
+            $this->redirect("Dashboard:in");
+        }
+        
+        else if ($this->URL == $n . "/"){
+            $this->redirect("Dashboard:in");
+        }
     	
-        $this->setListingSession($id);
+        else {
+            $this->setListingSession($id);  
+        }
     }
 
     public function actionBuy($id){
         
-        $this->setListingSession($id);
+        //URL not wanted
+        $n = "/listings/buy";
+        
+        //catch corner cases
+        if (is_null($this->request->getReferer()) && !is_null($id)){
+            $this->redirect("Listings:view", $id);
+        }
+        
+        else if (is_null($this->request->getReferer()) && is_null($id)){
+            $this->redirect("Dashboard:in");
+        }
+        
+        else if ($this->URL == $n){
+            $this->redirect("Dashboard:in");
+        }
+       
+        else if ($this->URL == $n . "/"){
+            $this->redirect("Dashboard:in");
+        }
+        
+        else {
+            $this->setListingSession($id);
+        } 
     }
 
     public function createComponentVendorNotesForm(){
@@ -249,9 +300,27 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function vendorNotesSuccess($form){
+        $session = $this->getSession()->getSection('listing');
+
+        //assemble argumets array
+        $listingID = $session->listingDetails->id;
+        $productName = $session->listingDetails['product_name'];
+        $userid = $this->returnId();
+        $quantity = $session->postageDetails['quantity'];
+        $postage = $session->postageDetails['postage'];
+        $buyerNotes = $form->getValues(TRUE)['notes'];
+        $date = date("j. n. Y");  
+        
+        $arguments  = array ("id" => $userid, "listing_id" => $listingID, 
+            "product_name" => $productName, "date_ordered" => $date,
+            "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes);
+        
+
+        //and write new order to database
+        $this->orders->writeOrderToDb($arguments);
+        
         //redirect user to his order list 
         //after item succesfully bought
-        
         $this->flashMessage('Operace proběhla úspěšně.'); 
         $this->redirect('Orders:in');
     }
@@ -280,8 +349,14 @@ class ListingsPresenter extends ProtectedPresenter {
     public function createComponentBuyForm(){
         $form = new Nette\Application\UI\Form;
         
-        $form->addSelect("postage", "Postage options:", array("Stub1", "Stub2"));
-        $form->addSelect("quantity", "Product quantity:", array("Stub1", "Stub2"));
+        $form->addSelect("postage", "Možnosti zásilky:", array("Stub1", "Stub2"))
+             ->addRule($form::FILLED, "Vyberte prosím některou z možností zásilky.");
+        
+        $form->addText('quantity', 'Množství:')
+             ->addRule($form::FILLED, "Vyplňte prosím množství.")
+             ->addRule($form::INTEGER, 'Množství musí být číslo')
+             ->addRule($form::RANGE, 'Množství 1 až 99 maximum.', array(1, 99));
+        
         $form->addSubmit("koupit", "Koupit");
         
         $form->onSuccess[] = array($this, 'buyFormOnSuccess');
@@ -290,7 +365,10 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function buyFormOnSuccess($form){
-        $listingID = $this->getSession()->getSection('listing')->listingDetails->id;
+        $session = $this->getSession()->getSection('listing');
+        $listingID = $session->listingDetails->id;
+        $session->postageDetails = $form->getValues(TRUE);
+        
         $this->redirect("Listings:Buy", $listingID);
     }
     

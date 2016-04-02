@@ -3,8 +3,6 @@
 namespace App\Presenters;
 
 use Nette;
-use App\Model;
-
 
 class DashboardPresenter extends ProtectedPresenter
 {        
@@ -16,8 +14,7 @@ class DashboardPresenter extends ProtectedPresenter
 	public function renderDefault()
 	{
                 $template = $this->createTemplate();
-                $template->setFile(__DIR__ . '/templates/Dashboard/in.latte');          
-              
+                $template->setFile(__DIR__ . '/templates/Dashboard/in.latte');       
 	}
         
         public function createComponentTest(){
