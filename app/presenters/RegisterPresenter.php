@@ -95,6 +95,9 @@ class RegisterPresenter extends GuestPresenter
 
         //hash the password for store in database
         $values['password'] = NS\Passwords::hash($password);
+        
+        //set user's access_level
+        $values['access_level'] = "registered";
 
         //create db record
         $this->regModel->createUser($values);

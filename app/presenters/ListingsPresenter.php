@@ -258,7 +258,9 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     	
         else {
-            $this->setListingSession($id);  
+            $this->setListingSession($id);
+            $session = $this->getSession()->getSection('images');
+            $session->listingImages = $this->listings->getListingImages($id);
         }
     }
 
@@ -452,22 +454,28 @@ class ListingsPresenter extends ProtectedPresenter {
 
         }
         
-        //send variables to template - depends on actual URL
-
+        //template variables shared between templates    
         $urlPath = $this->URL->path;
-
-        if ($urlPath == "/listings/"){
-            $this->template->isVendor = $this->listings->isVendor($id);
-            $this->template->listings = $this->listings->getListings($login);    
-            $this->template->currentUser = $this->returnLogin();          
-        }
-
-        if ( strpos($urlPath, "edit-listing" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
+     
+        if ( strpos($urlPath, "edit" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
             $this->template->listingImages = $this->getSession()->getSection('images')->listingImages;
             $this->template->listingID = $this->getSession()->getSection('listing')->listingID;
 
             //for single listing view action
-            $this->template->listingDetails = $this->getSession()->getSection('listing')->listingDetails;
+            if (strpos($urlPath, "view")){
+                $this->template->listingDetails = $this->getSession()->getSection('listing')->listingDetails;
+            }
         }
+    }
+    
+    public function renderIn(){
+        
+        //render variables for single template - Listings:in
+        
+        $login = $this->getUser()->getIdentity()->login;
+        $id = $this->getUser()->getIdentity()->getId();
+        $this->template->isVendor = $this->listings->isVendor($id);
+        $this->template->listings = $this->listings->getListings($login);    
+        $this->template->currentUser = $this->returnLogin();  
     }
 }
