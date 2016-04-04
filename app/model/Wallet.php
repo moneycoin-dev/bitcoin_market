@@ -14,8 +14,13 @@ class Wallet extends \DibiRow
         return $q['btcaddress'];       
     }
     
-    public function writeNewBtcAddress($newaddress ,$login){
-        dibi::update('users', array('btcaddress' => $newaddress))
+    public function writeNewBtcAddress($newaddress ,$login, $timestamp){
+        dibi::update('users', array('btcaddress' => $newaddress, 'address_request_time' => $timestamp))
                 ->where('login = %s', $login)->execute();
+    }
+    
+    public function addressLastRequest($login){
+        return dibi::select('address_request_time')->from('users')
+                ->where('login = %s', $login)->fetch()['address_request_time'];
     }
 }
