@@ -14,6 +14,7 @@ class ListingsPresenter extends ProtectedPresenter {
     protected $URL;
     protected $request;
     
+
     public function __construct(Nette\Http\Request $r){
         parent::__construct();
         
@@ -95,42 +96,94 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->vendorNotes = $vendorNotes;
     }
     
-    public function createComponentListingForm(){
+    public function postageCreator($form){
+        $form->addText("postage", "Metoda doručení");
+    }
+    
+   public function createComponentListingForm(){
+        
         $form = $this->formFactory->create();
         $form->addSubmit("submit", "Vytvořit");
+        $form->addSubmit("add_postage", "Přidat dopravu")
+                ->onClick[] = array($this, 'addPostage');
+        
+        //additional postage textboxes logic
+        $counter = $this->getSession()->getSection("postage")->counter;
+        
+        if (!is_null($counter)){
+        
+            for ($i =0; $i<$counter; $i++){
+                $form->addText("postage" .$i, "Doprava");  
+            }
+        }
+        
         $form->onSuccess[] = array($this, 'listingCreate');
         $form->onValidate[] = array($this, 'listingValidate');
-       
+               
         return $form;
+    }
+    
+    public function addPostage(){
+       
+        //store count of function calls into session
+        //createComponentListingForm - adds number of new textboxes
+        //according to this number, then redirect to newly created form
+  
+        $this->getSession()->getSection('postage')->counter++;
+        $this->redirect("Listings:create");
     }
     
     public function listingCreate($form){
         
-        $values = $form->getValues(True);
-        $id = $this->getUser()->getIdentity()->login;
-        
-        $imageLocations = array();
-        $images = $form->values['image'];
-        
-        foreach ($images as $image){
-            //get relative path to image for webserver &
-            //save relative paths into array
-            array_push($imageLocations, substr($image->getTemporaryFile(),
-                    strpos($image->getTemporaryFile(), "userfiles/")));     
+        //do things only if submited by "create button"
+        if(!$form['add_postage']->submittedBy){
+            
+            //unset postage textbox counter on success
+            unset($this->getSession()->getSection('postage')->counter);
+  
+            $values = $form->getValues(True);
+            $id = $this->getUser()->getIdentity()->login;
+
+            $imageLocations = array();
+            $images = $form->values['image'];
+
+            foreach ($images as $image){
+                //get relative path to image for webserver &
+                //save relative paths into array
+                array_push($imageLocations, substr($image->getTemporaryFile(),
+                        strpos($image->getTemporaryFile(), "userfiles/")));     
+            }
+
+            //serialize img locations to store it in one field in db
+            $imgLocSerialized = serialize($imageLocations);
+            
+            //create separate array only with postage options
+            //to later store it in db
+            $postage = array();
+            
+            foreach ($values as $key => $value) {
+                if (strpos($key, "postage") !== FALSE){
+                    array_push($postage, $value);
+                }
+            }
+            
+            $listingID = $this->listings->createListing($id, $values, $imgLocSerialized);
+            $this->listings->writeListingPostageOptions($listingID, $postage);
+            $this->redirect("Listings:in");
         }
-        
-        //serialize img locations to store it in one field in db
-        $imgLocSerialized = serialize($imageLocations);
-        $this->listings->createListing($id, $values, $imgLocSerialized);
-        
-        $this->redirect("Listings:in");
     }
     
     public function listingValidate($form){
         
-        $this->formValidateValues($form);
-        $images = $form->values['image'];
-        $this->imgUpload($images, $form);
+        //verify form only in case it was posted
+        //via "create button"
+        
+        if (!$form["add_postage"]->submittedBy){
+
+            $this->formValidateValues($form);
+            $images = $form->values['image'];
+            $this->imgUpload($images, $form);
+        }
     }
     
     public function handleVendor(){
@@ -150,10 +203,16 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
-    public function actionCreateListing(){
-        $this->redirect('Listings:create');
+    public function actionCreate(){        
+        //this code prevents showing multiple postage
+        //textboxes on page reload
+ 
+        if (is_null($this->request->getReferer())){
+            unset($this->getSession()->getSection('postage')->counter);
+            $this->redirect("Listings:in");
+        }     
     }
-    
+
     public function handleDeleteListing($id){
         $this->listings->deleteListing($id);
     }
@@ -174,6 +233,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function actionEditListing($id){
                     
+        //TODO use ACL
         if ($this->listings->getAuthor($id)['author'] !== $this->returnLogin()){
             $this->redirect("Listings:in");
         } else {
@@ -294,7 +354,6 @@ class ListingsPresenter extends ProtectedPresenter {
     public function createComponentVendorNotesForm(){
         
        $form = $this->vendorNotes->create();
-       
        $form->onSuccess[] = array($this, 'vendorNotesSuccess');
        $form->onValidate[] = array($this, 'vendorNotesValidate');
        
@@ -302,6 +361,7 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function vendorNotesSuccess($form){
+        
         $session = $this->getSession()->getSection('listing');
 
         //assemble argumets array
@@ -316,7 +376,6 @@ class ListingsPresenter extends ProtectedPresenter {
         $arguments  = array ("id" => $userid, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes);
-        
 
         //and write new order to database
         $this->orders->writeOrderToDb($arguments);
@@ -329,13 +388,10 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function vendorNotesValidate($form){
         
-          if ($form['zrusit']->submittedBy) {
+        if ($form['zrusit']->submittedBy) {
 
           $listingID = $this->getSession()->getSection('listing')->listingDetails->id;   
           $this->redirect('Listings:view', $listingID);
-          
-          $values = $form->getValues(TRUE);
-  
         }
 
         //is submitted data PGP? method placeholder
@@ -343,16 +399,21 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function handleSetMainImage($imgNum){
-        $listingID = $this->getSession()->getSection('listing')->listingID;
         
+        $listingID = $this->getSession()->getSection('listing')->listingID;     
         $this->listings->setListingMainImage($listingID, $imgNum);
     }
     
     public function createComponentBuyForm(){
+        
         $form = new Nette\Application\UI\Form;
         
-        $form->addSelect("postage", "Možnosti zásilky:", array("Stub1", "Stub2"))
-             ->addRule($form::FILLED, "Vyberte prosím některou z možností zásilky.");
+        $listingID =  $this->getSession()->getSection('listing')->listingDetails->id;
+        
+         $postageOptions = $this->listings->getPostageOptions($listingID);
+        
+        $form->addSelect("postage", "Možnosti zásilky:")->setItems($postageOptions, FALSE);
+         //    ->addRule($form::FILLED, "Vyberte prosím některou z možností zásilky.");
         
         $form->addText('quantity', 'Množství:')
              ->addRule($form::FILLED, "Vyplňte prosím množství.")
@@ -410,7 +471,6 @@ class ListingsPresenter extends ProtectedPresenter {
     public function beforeRender(){
         
         $login = $this->getUser()->getIdentity()->login;
-        $id = $this->returnId();
 
         //query bitcoind, get response
         $btcClient = $this->btcClient;
@@ -460,18 +520,13 @@ class ListingsPresenter extends ProtectedPresenter {
         if ( strpos($urlPath, "edit" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
             $this->template->listingImages = $this->getSession()->getSection('images')->listingImages;
             $this->template->listingID = $this->getSession()->getSection('listing')->listingID;
-
-            //for single listing view action
-            if (strpos($urlPath, "view")){
-                $this->template->listingDetails = $this->getSession()->getSection('listing')->listingDetails;
-            }
+            $this->template->listingDetails = $this->getSession()->getSection('listing')->listingDetails;
         }
     }
     
     public function renderIn(){
         
-        //render variables for single template - Listings:in
-        
+        //render variables for single template - Listings:in    
         $login = $this->getUser()->getIdentity()->login;
         $id = $this->getUser()->getIdentity()->getId();
         $this->template->isVendor = $this->listings->isVendor($id);
