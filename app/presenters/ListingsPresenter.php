@@ -96,11 +96,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->vendorNotes = $vendorNotes;
     }
     
-    public function postageCreator($form){
-        $form->addText("postage", "Metoda doručení");
-    }
-    
-   public function createComponentListingForm(){
+    public function createComponentListingForm(){
         
         $form = $this->formFactory->create();
         $form->addSubmit("submit", "Vytvořit");
