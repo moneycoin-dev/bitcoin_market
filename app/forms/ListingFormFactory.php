@@ -20,7 +20,6 @@ class ListingFormFactory extends Nette\Object
         $form->addSelect('ships_from', 'Ships from:', array("Czech", "Germany", "Italy"));
         $form->addSelect('ships_to', 'Ships to:', array("Europe", "Usa", "Etc"));
         $form->addSelect('product_type', 'Product type:', array("Physical package", "Digital Package"));
-        $form->addText('postage', 'Doprava');
         $form->addText('price', 'Price:');
         $form->addUpload('image', 'Product image:', TRUE);
 

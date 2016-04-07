@@ -31,7 +31,7 @@ class Listings extends \DibiRow {
     
     public function writeListingPostageOptions($listingID, array $postage){
         
-        $postageLen = count($postage);
+        $postageLen = count($postage['options']);
         $listing = array();
         
         //assemble array with listingID duplicates
@@ -42,13 +42,35 @@ class Listings extends \DibiRow {
         //to correctly form argument array
         $a = array (
             "listing_id" => $listing,
-            "option" => $postage,
+            "option" => $postage['options'],
+            "price" => $postage['prices']
         );
 
         //to pass it to db layer with %m multiple insert modifier
         dibi::query('INSERT INTO [postage] %m', $a);
     }
     
+    public function updatePostageOptions(array $values){
+
+        //decided not to use collision insert technique
+        foreach ($values as $value){
+            
+            if (array_key_exists("option", $value)){
+                dibi::update('postage', array('option' => $value['option']))
+                ->where('postage_id = %i', $value['id'])->execute();
+            }
+            
+            if (array_key_exists("price", $value)){
+                dibi::update('postage', array('price' => $value['price']))
+                ->where('postage_id = %i', $value['id'])->execute();
+            }   
+        }
+    }
+    
+    public function getPostageOptions($id){
+        return dibi::select('*')->from('postage')->where('listing_id = %i', $id)->fetchAll();
+    }
+        
     public function getListings($author){
         return dibi::select('id, product_name')->from('listings')->where('author = %s', $author)->fetchAll();
     }
@@ -90,16 +112,5 @@ class Listings extends \DibiRow {
 
     public function getListingPrice($id){
         return dibi::select('price')->from('listings')->where('id = %i', $id)->fetch();
-    }
-    
-    public function getPostageOptions($id){
-        $q = dibi::select('option')->from('postage')->where('listing_id = %i', $id)->fetchAll(); 
-        $array = array();
-        
-        foreach($q as $option){
-            array_push($array, $option['option']);
-        }
-        
-        return $array;
     }
 }

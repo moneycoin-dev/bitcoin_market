@@ -13,8 +13,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     protected $URL;
     protected $request;
-    
-
+  
     public function __construct(Nette\Http\Request $r){
         parent::__construct();
         
@@ -33,6 +32,29 @@ class ListingsPresenter extends ProtectedPresenter {
         $id = $this->getUser()->getIdentity()->getId();       
         return $id;
     }
+    
+    private function returnPostageArray($values){
+        //create separate array with postage options and postage prices
+        //to later store it in db
+        $postage = $postagePrice = $result = array();
+
+        foreach ($values as $key => $value) {
+            
+            if (strpos($key, "postage") !== FALSE){
+                array_push($postage, $value);
+            }
+            
+            if (strpos($key, "pprice") !== FALSE){
+                array_push($postagePrice, $value);
+            }
+        }
+        
+        $result['options'] = $postage;
+        $result['prices'] = $postagePrice;
+        
+        return $result;
+    }
+    
       
     private function formValidateValues($form){
         
@@ -107,11 +129,16 @@ class ListingsPresenter extends ProtectedPresenter {
         $counter = $this->getSession()->getSection("postage")->counter;
         
         if (!is_null($counter)){
+            
+            $form->addGroup("Postage");
         
             for ($i =0; $i<$counter; $i++){
-                $form->addText("postage" .$i, "Doprava");  
+                $form->addText("postage" .$i, "Doprava"); 
+                $form->addText("pprice" .$i, "Cena");
             }
         }
+        
+        $form->addProtection('Vypršel časový limit, odešlete formulář znovu');
         
         $form->onSuccess[] = array($this, 'listingCreate');
         $form->onValidate[] = array($this, 'listingValidate');
@@ -153,16 +180,7 @@ class ListingsPresenter extends ProtectedPresenter {
             //serialize img locations to store it in one field in db
             $imgLocSerialized = serialize($imageLocations);
             
-            //create separate array only with postage options
-            //to later store it in db
-            $postage = array();
-            
-            foreach ($values as $key => $value) {
-                if (strpos($key, "postage") !== FALSE){
-                    array_push($postage, $value);
-                }
-            }
-            
+            $postage = $this->returnPostageArray($values);
             $listingID = $this->listings->createListing($id, $values, $imgLocSerialized);
             $this->listings->writeListingPostageOptions($listingID, $postage);
             $this->redirect("Listings:in");
@@ -215,6 +233,16 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function createComponentEditForm(){
           $frm = $this->formFactory->create();
+          $frm->addGroup("Postage");
+          
+          $cnt = count ($this->postageOptions);
+          
+          for ($i = 0; $i<$cnt; $i++){
+              $frm->addText("postage" . $i, "Doprava");
+              $frm->addText("pprice" . $i, "Cena dopravy");
+          }
+          
+          $frm->setCurrentGroup(NULL);    
           $frm->addSubmit("submit", "Upravit");
         
           $frm->onSuccess[] = array($this, 'editSuccess');
@@ -226,6 +254,7 @@ class ListingsPresenter extends ProtectedPresenter {
     private $actualListingValues;
     private $listingImages;
     private $listingID;
+    private $postageOptions;
     
     public function actionEditListing($id){
                     
@@ -234,6 +263,7 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->redirect("Listings:in");
         } else {
            $this->actualListingValues = $this->listings->getActualListingValues($id);
+           $this->postageOptions = $this->listings->getPostageOptions($id);
         }
         
         $listingImages = $this->listings->getListingImages($id);
@@ -406,7 +436,12 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $listingID =  $this->getSession()->getSection('listing')->listingDetails->id;
         
-         $postageOptions = $this->listings->getPostageOptions($listingID);
+        $postageOptionsDB = $this->listings->getPostageOptions($listingID);
+        $postageOptions = array();
+        
+        foreach($postageOptionsDB as $option){
+            array_push($postageOptions, $option['option'] . "+" . $option['price'] . "Kč");
+        }
         
         $form->addSelect("postage", "Možnosti zásilky:")->setItems($postageOptions, FALSE);
          //    ->addRule($form::FILLED, "Vyberte prosím některou z možností zásilky.");
@@ -451,7 +486,31 @@ class ListingsPresenter extends ProtectedPresenter {
         $existingImages = $this->listings->getListingImages($listingID);
         $new_images = serialize(array_merge($imageLocations, $existingImages));
         
-        $this->listings->updateListingImages($listingID, $new_images);    
+        $postageToUpdate = $this->returnPostageArray($values);
+        $postageFromDB = $this->listings->getPostageOptions($listingID);
+
+        //asseble array with new postage values and database ids to edit
+        $arrayToWrite = array();
+        
+        $cnt = 0;
+        
+        foreach($postageFromDB as $option){
+            
+            if ($postageToUpdate['options'][$cnt] !== $option['option']){
+                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                $arrayToWrite[$cnt]['option'] = $postageToUpdate['options'][$cnt];
+            }
+            
+            if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
+                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                $arrayToWrite[$cnt]['price'] = $postageToUpdate['prices'][$cnt];
+            }
+                
+            $cnt++; 
+        }
+        
+        $this->listings->updateListingImages($listingID, $new_images);   
+        $this->listings->updatePostageOptions($arrayToWrite);
         $this->listings->editListing($id, $values);
         $this->flashMessage("Listing uspesne upraven!");
         $this->redirect("Listings:editListing", $listingID);
@@ -482,9 +541,13 @@ class ListingsPresenter extends ProtectedPresenter {
         $componenty = iterator_to_array($component_iterator);
 
         if ($this->actualListingValues != null){
-
+            
+            $optArray = $this->postageOptions;
+            $postageCounter = $priceCounter = 0;
+               
             foreach ($componenty as $comp){
                 switch($comp->name){
+                    
                     case 'product_name':
                         $comp->setValue($this->actualListingValues['product_name']);
                         break;
@@ -502,7 +565,17 @@ class ListingsPresenter extends ProtectedPresenter {
                         break;
                     case 'product_type':
                         $comp->setValue($this->actualListingValues['ships_to']);
-                        break;        
+                        break;
+                    case (strpos($comp->name, "postage")):
+                        //render all postage options into correct textboxes
+                        $comp->setValue($optArray[$postageCounter]['option']);
+                        $postageCounter++;
+                        break; 
+                    case (strpos($comp->name, "pprice")):
+                        //render postage prices into correct textboxes      
+                        $comp->setValue($optArray[$priceCounter]['price']);
+                        $priceCounter++;      
+                        break; 
                 }
             }
 
