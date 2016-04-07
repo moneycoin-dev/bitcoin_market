@@ -182,7 +182,11 @@ class ListingsPresenter extends ProtectedPresenter {
             
             $postage = $this->returnPostageArray($values);
             $listingID = $this->listings->createListing($id, $values, $imgLocSerialized);
-            $this->listings->writeListingPostageOptions($listingID, $postage);
+            
+            if (!empty($postage['options'])){
+                $this->listings->writeListingPostageOptions($listingID, $postage);
+            }
+           
             $this->redirect("Listings:in");
         }
     }
@@ -267,7 +271,6 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         $listingImages = $this->listings->getListingImages($id);
-
         $imgSession = $this->getSession()->getSection('images');
         $imgSession->listingImages = $listingImages;
         $listingSession = $this->getSession()->getSection('listing');
