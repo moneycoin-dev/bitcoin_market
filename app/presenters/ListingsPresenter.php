@@ -33,19 +33,44 @@ class ListingsPresenter extends ProtectedPresenter {
         return $id;
     }
     
-    private function returnPostageArray($values){
+    private function returnPostageArray($values, $flag = NULL){
         //create separate array with postage options and postage prices
         //to later store it in db
         $postage = $postagePrice = $result = array();
-
+        
+        $findPostage = "postage";
+        $findPrice = "pprice";
+       
         foreach ($values as $key => $value) {
             
-            if (strpos($key, "postage") !== FALSE){
-                array_push($postage, $value);
-            }
-            
-            if (strpos($key, "pprice") !== FALSE){
-                array_push($postagePrice, $value);
+            if ($flag == NULL){
+                
+                //code for adding postage options
+                //upon listing creation
+                
+                if (strpos($key, $findPostage) !== FALSE){
+                    array_push($postage, $value);
+                }
+
+                if (strpos($key, $findPrice) !== FALSE){
+                    array_push($postagePrice, $value);
+                }
+            } else {
+                
+                //code for adding postage options
+                //when user wants to edit his listing
+                
+                if (strpos($key, $findPostage) !== FALSE ){
+                    if (strchr($key, "X")){
+                        array_push($postage, $value);
+                    }
+                }
+
+                if (strpos($key, $findPrice) !== FALSE){
+                    if (strchr($key, "X")){
+                        array_push($postagePrice, $value);
+                    }
+                }
             }
         }
         
@@ -122,8 +147,12 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $form = $this->formFactory->create();
         $form->addSubmit("submit", "Vytvořit");
-        $form->addSubmit("add_postage", "Přidat dopravu")
-                ->onClick[] = array($this, 'addPostage');
+        $form->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function (){
+            
+             $this->getSession()->getSection('postage')->counter++;
+             $this->redirect("Listings:create");
+             
+        };
         
         //additional postage textboxes logic
         $counter = $this->getSession()->getSection("postage")->counter;
@@ -144,16 +173,6 @@ class ListingsPresenter extends ProtectedPresenter {
         $form->onValidate[] = array($this, 'listingValidate');
                
         return $form;
-    }
-    
-    public function addPostage(){
-       
-        //store count of function calls into session
-        //createComponentListingForm - adds number of new textboxes
-        //according to this number, then redirect to newly created form
-  
-        $this->getSession()->getSection('postage')->counter++;
-        $this->redirect("Listings:create");
     }
     
     public function listingCreate($form){
@@ -235,24 +254,54 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->listings->deleteListing($id);
     }
     
+    public function handleDeletePostage($id){
+        $this->listings->deletePostageOption($id);
+    }
+    
+    public function handleDisableListing($id){
+        
+    }
+    
+    public function handleEnableListing(){
+        
+    }
+    
     public function createComponentEditForm(){
-          $frm = $this->formFactory->create();
-          $frm->addGroup("Postage");
+        $frm = $this->formFactory->create();
           
-          $cnt = count ($this->postageOptions);
+        $cnt = count ($this->postageOptions);
           
-          for ($i = 0; $i<$cnt; $i++){
-              $frm->addText("postage" . $i, "Doprava");
-              $frm->addText("pprice" . $i, "Cena dopravy");
-          }
-          
-          $frm->setCurrentGroup(NULL);    
-          $frm->addSubmit("submit", "Upravit");
+        for ($i = 0; $i<$cnt; $i++){
+            $frm->addText("postage" . $i, "Doprava");
+            $frm->addText("pprice" . $i, "Cena dopravy");
+        }
+            
+        //additional postage textboxes logic
+        $counter = $this->getSession()->getSection("postage")->counterEdit;
         
-          $frm->onSuccess[] = array($this, 'editSuccess');
-          $frm->onValidate[] = array($this, 'editValidate');
+        if (!is_null($counter)){
+            
+            $frm->addGroup("Postage");
         
-          return $frm;    
+            for ($i =0; $i<$counter; $i++){
+                $frm->addText("postage" .$i. "X", "Doprava"); 
+                $frm->addText("pprice" .$i. "X", "Cena");
+            }
+        }
+          
+        $frm->addSubmit("submit", "Upravit");
+        $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function(){
+            
+            //inline onlclick handler, that counts postage options
+            $this->getSession()->getSection('postage')->counterEdit++;
+            $listingID = $this->getSession()->getSection('listing')->listingID;
+            $this->redirect("Listings:editListing", $listingID);
+        };
+                  
+        $frm->onSuccess[] = array($this, 'editSuccess');
+        $frm->onValidate[] = array($this, 'editValidate');
+        
+        return $frm;    
     }
     
     private $actualListingValues;
@@ -261,7 +310,7 @@ class ListingsPresenter extends ProtectedPresenter {
     private $postageOptions;
     
     public function actionEditListing($id){
-                    
+                            
         //TODO use ACL
         if ($this->listings->getAuthor($id)['author'] !== $this->returnLogin()){
             $this->redirect("Listings:in");
@@ -472,58 +521,69 @@ class ListingsPresenter extends ProtectedPresenter {
     public $id;
     
     public function editSuccess($form){
-        $id = $this->actualListingValues['id'];
-        $listingID = $this->getSession()->getSection('listing')->listingID;
-        $values = $form->getValues();
         
-        $form_images = $form->values['image'];
-        $imageLocations = array();
-        
-        foreach ($form_images as $image){
-        //get relative path to image for webserver &
-        //save relative paths into array
-            array_push($imageLocations, substr($image->getTemporaryFile(),
-                    strpos($image->getTemporaryFile(), "userfiles/")));     
-        }
-       
-        $existingImages = $this->listings->getListingImages($listingID);
-        $new_images = serialize(array_merge($imageLocations, $existingImages));
-        
-        $postageToUpdate = $this->returnPostageArray($values);
-        $postageFromDB = $this->listings->getPostageOptions($listingID);
+        if (!$form['add_postage']->submittedBy){
+            
+            unset($this->getSession()->getSection('postage')->counterEdit);
 
-        //asseble array with new postage values and database ids to edit
-        $arrayToWrite = array();
-        
-        $cnt = 0;
-        
-        foreach($postageFromDB as $option){
-            
-            if ($postageToUpdate['options'][$cnt] !== $option['option']){
-                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
-                $arrayToWrite[$cnt]['option'] = $postageToUpdate['options'][$cnt];
+            $id = $this->actualListingValues['id'];
+            $listingID = $this->getSession()->getSection('listing')->listingID;
+            $values = $form->getValues();
+
+            $form_images = $form->values['image'];
+            $imageLocations = array();
+
+            foreach ($form_images as $image){
+            //get relative path to image for webserver &
+            //save relative paths into array
+                array_push($imageLocations, substr($image->getTemporaryFile(),
+                        strpos($image->getTemporaryFile(), "userfiles/")));     
+            }
+
+            $existingImages = $this->listings->getListingImages($listingID);
+            $new_images = serialize(array_merge($imageLocations, $existingImages));
+
+            $postageToUpdate = $this->returnPostageArray($values);
+            $postageFromDB = $this->listings->getPostageOptions($listingID);
+
+            //asseble array with new postage values and database ids to edit
+            $arrayToWrite = array();
+
+            $cnt = 0;
+
+            foreach($postageFromDB as $option){
+
+                if ($postageToUpdate['options'][$cnt] !== $option['option']){
+                    $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                    $arrayToWrite[$cnt]['option'] = $postageToUpdate['options'][$cnt];
+                }
+
+                if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
+                    $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                    $arrayToWrite[$cnt]['price'] = $postageToUpdate['prices'][$cnt];
+                }
+
+                $cnt++; 
             }
             
-            if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
-                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
-                $arrayToWrite[$cnt]['price'] = $postageToUpdate['prices'][$cnt];
-            }
-                
-            $cnt++; 
+            $postageAdditional = $this->returnPostageArray($values, TRUE);
+
+            $this->listings->writeListingPostageOptions($listingID, $postageAdditional);
+            $this->listings->updateListingImages($listingID, $new_images);   
+            $this->listings->updatePostageOptions($arrayToWrite);
+            $this->listings->editListing($id, $values);
+            $this->flashMessage("Listing uspesne upraven!");
+            $this->redirect("Listings:editListing", $listingID); 
         }
-        
-        $this->listings->updateListingImages($listingID, $new_images);   
-        $this->listings->updatePostageOptions($arrayToWrite);
-        $this->listings->editListing($id, $values);
-        $this->flashMessage("Listing uspesne upraven!");
-        $this->redirect("Listings:editListing", $listingID);
     }
     
     public function editValidate($form){
 
-        $this->formValidateValues($form);
-        $images = $form->values['image'];
-        $this->imgUpload($images, $form);
+        if (!$form['add_postage']->submittedBy){
+            $this->formValidateValues($form);
+            $images = $form->values['image'];
+            $this->imgUpload($images, $form);
+        }
     }
     
     public function beforeRender(){
@@ -571,13 +631,17 @@ class ListingsPresenter extends ProtectedPresenter {
                         break;
                     case (strpos($comp->name, "postage")):
                         //render all postage options into correct textboxes
-                        $comp->setValue($optArray[$postageCounter]['option']);
-                        $postageCounter++;
+                        if (array_key_exists($postageCounter, $optArray)){
+                            $comp->setValue($optArray[$postageCounter]['option']);
+                            $postageCounter++;
+                        }
                         break; 
                     case (strpos($comp->name, "pprice")):
-                        //render postage prices into correct textboxes      
-                        $comp->setValue($optArray[$priceCounter]['price']);
-                        $priceCounter++;      
+                        //render postage prices into correct textboxes
+                        if (array_key_exists($priceCounter, $optArray)){
+                            $comp->setValue($optArray[$priceCounter]['price']);
+                            $priceCounter++;  
+                        }    
                         break; 
                 }
             }

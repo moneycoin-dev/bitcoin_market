@@ -1,7 +1,15 @@
-{control editForm}
+{form editForm}
+<table>
+    {control $form errors}
+<tr n:foreach="$form->controls as $name => $field">
+    {dump $name}
+    <th>{label $name /}<th>
+    <td>{input $name}</td>
+</tr>
+</table>
+{/form}
+
 {var $img = 0 }
-
-
 {foreach $listingImages as $listingImg}
     
     <div>

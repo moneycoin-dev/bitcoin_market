@@ -70,6 +70,10 @@ class Listings extends \DibiRow {
     public function getPostageOptions($id){
         return dibi::select('*')->from('postage')->where('listing_id = %i', $id)->fetchAll();
     }
+    
+    public function deletePostageOption($id){
+        return dibi::delete('postage')->where('postage_id = %i', $id)->execute();
+    }
         
     public function getListings($author){
         return dibi::select('id, product_name')->from('listings')->where('author = %s', $author)->fetchAll();
@@ -112,5 +116,13 @@ class Listings extends \DibiRow {
 
     public function getListingPrice($id){
         return dibi::select('price')->from('listings')->where('id = %i', $id)->fetch();
+    }
+    
+    public function enableListing($id){
+        
+    }
+    
+    public function disableListing($id){
+        
     }
 }
