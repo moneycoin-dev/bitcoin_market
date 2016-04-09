@@ -119,10 +119,10 @@ class Listings extends \DibiRow {
     }
     
     public function enableListing($id){
-        
+        return dibi::update('listings', array('status' => 'active'))->where('id = %i', $id)->execute();
     }
     
     public function disableListing($id){
-        
+        return dibi::update('listings', array('status' => 'disabled'))->where('id = %i', $id)->execute();
     }
 }

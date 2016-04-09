@@ -1,11 +1,19 @@
+{var $postage = 0}
 {form editForm}
 <table>
-    {control $form errors}
-<tr n:foreach="$form->controls as $name => $field">
+{control $form errors}
+{foreach $form->controls as $name => $field}
+    <tr>
     {dump $name}
     <th>{label $name /}<th>
+    {if $presenter->compareComponentName($name) == TRUE }
+    <td>{input $name} &nbsp; <a n:href="deletePostage! (expand) array($postage, $listingID, $name)"> Smazat </a></td>
+    {? $postage++}
+    {else}
     <td>{input $name}</td>
-</tr>
+    {/if}
+    </tr>
+{/foreach}
 </table>
 {/form}
 
@@ -20,5 +28,5 @@
     <a n:href="setMainImage! $img"> Nastavit jako hlavní </a>
     </div>
     <br>
-    {var $img = $img++}
+    {? $img++}
 {/foreach }

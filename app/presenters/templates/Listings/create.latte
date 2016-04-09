@@ -1,1 +1,18 @@
-{control listingForm}
+{var $postage = 0}
+{form listingForm}
+<table>
+{control $form errors}
+{foreach $form->controls as $name => $field}
+    <tr>
+    {dump $name}
+    <th>{label $name /}<th>
+    {if $presenter->compareComponentName($name) == TRUE }
+    <td>{input $name} &nbsp; <a n:href="deletePostage! $postage"> Smazat </a></td>
+    {? $postage++}
+    {else}
+    <td>{input $name}</td>
+    {/if}
+    </tr>
+{/foreach}
+</table>
+{/form}

@@ -13,6 +13,8 @@ class ListingsPresenter extends ProtectedPresenter {
     
     protected $URL;
     protected $request;
+    
+    const MAX_POSTAGE_OPTIONS = 5;
   
     public function __construct(Nette\Http\Request $r){
         parent::__construct();
@@ -80,7 +82,27 @@ class ListingsPresenter extends ProtectedPresenter {
         return $result;
     }
     
-      
+    private function fillForm($form , $values){
+        
+        //fills form after submission with previously
+        //entered values
+        //used when adding postage options
+        
+        if (!empty($values)){
+            
+            $iterator = $form->getControls();
+            $allControls = iterator_to_array($iterator);
+
+            foreach ($allControls as $indexName => $control){
+                foreach ($values as $valueName => $value){
+                    if ($indexName == $valueName){             
+                        $control->setValue($value);
+                    }
+                }
+            }
+        }
+    }
+    
     private function formValidateValues($form){
         
         $values = $form->getValues(TRUE);
@@ -89,6 +111,21 @@ class ListingsPresenter extends ProtectedPresenter {
             if (!isset($value) || (is_string($value) && strcmp($value, "") == 0)){
                 $form->addError("Formulář nesmí obsahovat prázdné pole.");
             }
+        }
+    }
+    
+    public function compareComponentName($name){
+        
+        //component name comparator called from template
+        //serves rendering of delete postage action link
+        if (strpos($name, "postage") !== FALSE){    
+            if (strpos($name, "add_postage") !== FALSE){
+                return FALSE;
+            }
+            return TRUE;
+            
+        } else {
+            return FALSE;
         }
     }
     
@@ -149,26 +186,45 @@ class ListingsPresenter extends ProtectedPresenter {
         $form->addSubmit("submit", "Vytvořit");
         $form->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function (){
             
-             $this->getSession()->getSection('postage')->counter++;
-             $this->redirect("Listings:create");
+            //set up postage counter
+            $session = $this->getSession()->getSection("postage");
+            $counter = &$session->counter;
+            
+            if ($counter <= self::MAX_POSTAGE_OPTIONS){
+                $counter++;
+            } else {
+                $this->flashMessage("Dosáhli jste maxima poštovních možností.");
+            }
+            
+            //get form component and its values after click
+            //and set up session with values
+            $form = $this->getComponent("listingForm");
+            $values = $form->getValues(TRUE);
+            $session->values = $values;
              
+            //redirect is a must to re-render new form
+            $this->redirect("Listings:create");         
         };
         
-        //additional postage textboxes logic
-        $counter = $this->getSession()->getSection("postage")->counter;
+        $session = $this->getSession()->getSection("postage");
+        $counter = $session->counter;
+        $values = $session->values;
         
+        //additional postage textboxes logic
         if (!is_null($counter)){
             
             $form->addGroup("Postage");
-        
+                
             for ($i =0; $i<$counter; $i++){
-                $form->addText("postage" .$i, "Doprava"); 
+                $form->addText("postage" .$i, "Doprava");
                 $form->addText("pprice" .$i, "Cena");
             }
         }
         
-        $form->addProtection('Vypršel časový limit, odešlete formulář znovu');
-        
+        //fill form with values from session upon creation
+        $this->fillForm($form, $values);
+     
+        $form->addProtection('Vypršel časový limit, odešlete formulář znovu');    
         $form->onSuccess[] = array($this, 'listingCreate');
         $form->onValidate[] = array($this, 'listingValidate');
                
@@ -178,11 +234,12 @@ class ListingsPresenter extends ProtectedPresenter {
     public function listingCreate($form){
         
         //do things only if submited by "create button"
-        if(!$form['add_postage']->submittedBy){
+        if (!$form['add_postage']->submittedBy){
             
+            //things to do when form is submitted by create button
             //unset postage textbox counter on success
             unset($this->getSession()->getSection('postage')->counter);
-  
+            
             $values = $form->getValues(True);
             $id = $this->getUser()->getIdentity()->login;
 
@@ -240,50 +297,109 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
-    public function actionCreate(){        
+    public function actionCreate(){
+        
         //this code prevents showing multiple postage
         //textboxes on page reload
- 
         if (is_null($this->request->getReferer())){
             unset($this->getSession()->getSection('postage')->counter);
+            unset($this->getSession()->getSection("postage")->values);
             $this->redirect("Listings:in");
         }     
+    }
+    
+    public function actionIn(){
+        //when user goes to Listings:in for example by backward button
+        //unset all the counters, to show only correct values
+        unset($this->getSession()->getSection('postage')->counter);
+        unset($this->getSession()->getSection("postage")->counterEdit);
+        unset($this->getSession()->getSection("postage")->values);
     }
 
     public function handleDeleteListing($id){
         $this->listings->deleteListing($id);
     }
     
-    public function handleDeletePostage($id){
-        $this->listings->deletePostageOption($id);
+    public function handleDeletePostage($option, $id = NULL, $name = NULL){
+        
+        //functionality shared between createListing and editListing actions
+        //if $name is null means that function has been called from createListing   
+        if (!is_null($name)){
+                
+            $counter = &$this->getSession()->getSection('postage')->counterEdit;
+
+            //decrease the counter for temporary field deletion only
+            //if 0 unset totally to delete all fields from view
+            if ($counter == 0){
+                unset($counter);
+            } else {
+                $counter--;
+            }
+
+            $array = $this->listings->getPostageOptions($id);
+            $ids = array();
+
+            //assemble array and sort ids from lower to higher
+            //to actually determine which postage record delete from db
+            //MYSQL DELETE with LIMIT cannot be performed with OFFSET parameter
+            foreach($array as $postage){
+                array_push($ids, $postage['postage_id']);
+            }
+
+            asort($ids);
+
+           //X in name means temporary field
+           //if it's not temporary - delete from database
+           if (strpos($name, "X") == FALSE){
+                $this->listings->deletePostageOption($ids[$option]);
+           }
+
+           //redirect to the new form
+           $this->redirect("Listings:editListing", $id);
+        } else {
+            
+            //decreasing fields for create listing
+            $counter = &$this->getSession()->getSection('postage')->counter;
+            
+            if ($counter == 0){
+                unset($counter);
+            } else {
+                $counter--;
+            }
+        }
     }
     
     public function handleDisableListing($id){
-        
+        $this->listings->enableListing($id);
     }
     
-    public function handleEnableListing(){
-        
+    public function handleEnableListing($id){
+        $this->listings->disableListing($id);
     }
     
     public function createComponentEditForm(){
         $frm = $this->formFactory->create();
-          
-        $cnt = count ($this->postageOptions);
-          
+        $cnt = count ($this->postageOptions);  
+        $session = $this->getSession()->getSection("postage");
+
+        
         for ($i = 0; $i<$cnt; $i++){
-            $frm->addText("postage" . $i, "Doprava");
-            $frm->addText("pprice" . $i, "Cena dopravy");
+
+                $frm->addText("postage" . $i, "Doprava");
+                $frm->addText("pprice" . $i, "Cena dopravy");
+
         }
             
         //additional postage textboxes logic
-        $counter = $this->getSession()->getSection("postage")->counterEdit;
+        $counter = $session->counterEdit;
+        $values = $session->values;
         
         if (!is_null($counter)){
             
             $frm->addGroup("Postage");
         
             for ($i =0; $i<$counter; $i++){
+    
                 $frm->addText("postage" .$i. "X", "Doprava"); 
                 $frm->addText("pprice" .$i. "X", "Cena");
             }
@@ -293,13 +409,27 @@ class ListingsPresenter extends ProtectedPresenter {
         $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function(){
             
             //inline onlclick handler, that counts postage options
-            $this->getSession()->getSection('postage')->counterEdit++;
+            $session = $this->getSession()->getSection('postage');
+            $counter = &$session->counterEdit;
+            
+            if ($counter <= self::MAX_POSTAGE_OPTIONS){
+                $counter++;
+            } else {
+                $this->flashMessage("Dosáhli jste maxima poštovních možností.");
+            }
+            
+            $form = $this->getComponent("editForm");
+            $session->values = $form->getValues(TRUE);
+            
             $listingID = $this->getSession()->getSection('listing')->listingID;
             $this->redirect("Listings:editListing", $listingID);
         };
-                  
+           
+        $this->fillForm($frm, $values);
+                    
         $frm->onSuccess[] = array($this, 'editSuccess');
         $frm->onValidate[] = array($this, 'editValidate');
+        $frm->onSubmit[] = array($this, 'editSubmit');
         
         return $frm;    
     }
@@ -328,15 +458,9 @@ class ListingsPresenter extends ProtectedPresenter {
 
     public function handleDeleteClick($img){
 
-        $listingID = $this->getSession()->getSection('listing')->listingID;
-
-        $images = $this->listings->getListingImages($listingID);
-
-        $session = $this->getSession();
-        $images = $session->getSection('images');
+        $images = $this->getSession()->getSection('images');
         $images->toDelete = $img;
-         
-        $this->redirect("Listings:alert");     
+        $this->redirect("Listings:alert");       
     }
     
     public function handleDeleteImage(){
@@ -520,6 +644,14 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public $id;
     
+    public function editSubmit($form){
+        $values = $form->getValues(TRUE);
+        
+        $this->getSession()->getSection('postage')->values = $values;
+        $listingID = $this->getSession()->getSection('listing')->listingID;
+        $this->redirect("Listings:editListing", $listingID); 
+    }
+    
     public function editSuccess($form){
         
         if (!$form['add_postage']->submittedBy){
@@ -567,8 +699,11 @@ class ListingsPresenter extends ProtectedPresenter {
             }
             
             $postageAdditional = $this->returnPostageArray($values, TRUE);
-
-            $this->listings->writeListingPostageOptions($listingID, $postageAdditional);
+            
+            if (!empty($postageAdditional['options'])){
+                $this->listings->writeListingPostageOptions($listingID, $postageAdditional);
+            }
+            
             $this->listings->updateListingImages($listingID, $new_images);   
             $this->listings->updatePostageOptions($arrayToWrite);
             $this->listings->editListing($id, $values);
