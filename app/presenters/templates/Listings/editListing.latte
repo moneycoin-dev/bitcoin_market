@@ -4,7 +4,6 @@
 {control $form errors}
 {foreach $form->controls as $name => $field}
     <tr>
-    {dump $name}
     <th>{label $name /}<th>
     {if $presenter->compareComponentName($name) == TRUE }
     <td>{input $name} &nbsp; <a n:href="deletePostage! (expand) array($postage, $listingID, $name)"> Smazat </a></td>

@@ -76,7 +76,7 @@ class Listings extends \DibiRow {
     }
         
     public function getListings($author){
-        return dibi::select('id, product_name')->from('listings')->where('author = %s', $author)->fetchAll();
+        return dibi::select('id, product_name, status')->from('listings')->where('author = %s', $author)->fetchAll();
     }
     
     public function editListing($id, $values){
@@ -124,5 +124,15 @@ class Listings extends \DibiRow {
     
     public function disableListing($id){
         return dibi::update('listings', array('status' => 'disabled'))->where('id = %i', $id)->execute();
+    }
+    
+    public function isListingActive($id){
+        $q = dibi::select('status')->from('listings')->where('id = %i', $id)->fetch();
+        
+        if ($q['status'] == "active"){
+            return TRUE;
+        } else {
+            return FALSE;
+        }
     }
 }

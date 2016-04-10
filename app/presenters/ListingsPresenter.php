@@ -35,6 +35,18 @@ class ListingsPresenter extends ProtectedPresenter {
         return $id;
     }
     
+    private function isListingAuthor($id){
+        //checks whether user is author of the listing
+        $listingAuthor = $this->listings->getAuthor($id)['author'];
+        $actualUser = $this->returnLogin();
+        
+        if ($listingAuthor == $actualUser){
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+    
     private function returnPostageArray($values, $flag = NULL){
         //create separate array with postage options and postage prices
         //to later store it in db
@@ -283,16 +295,24 @@ class ListingsPresenter extends ProtectedPresenter {
     public function handleVendor(){
         
         $session = $this->getSession()->getSection('balance');
-        
-        $login =  $this->returnLogin();      
+        $login =  $this->returnLogin();
+        $id = $this->getUser()->getIdentity()->getId();
   
         if ($session->balance > 1){
-          //  try {
-                 $this->listings->becomeVendor($login);
-          //  } catch () {
-            //    ...
-           // }
-        } else {
+         
+            $this->listings->becomeVendor($login);
+            $this->flashMessage("Váš účet má nyní vendor status");
+            $this->redirect("Listings:in");
+        } 
+        
+        else if ($this->listings->isVendor($id)) {
+            //if user isalready vendor
+            //redirect him in case he accidentaly visists
+            //this page
+            $this->redirect("Listings:in");
+        }
+        
+        else {
             $this->flashMessage('You dont have sufficient funds!');
         }
     }
@@ -370,11 +390,23 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function handleDisableListing($id){
-        $this->listings->enableListing($id);
+        
+        if ($this->isListingAuthor($id)){
+            $this->listings->disableListing($id);
+            $this->redirect("Listings:in");
+        } else {
+            $this->redirect("Listings:in");
+        }
     }
     
     public function handleEnableListing($id){
-        $this->listings->disableListing($id);
+        
+        if ($this->isListingAuthor($id)){
+            $this->listings->enableListing($id);
+            $this->redirect("Listings:in");
+        } else {
+            $this->redirect("Listings:in");
+        }
     }
     
     public function createComponentEditForm(){
@@ -429,7 +461,6 @@ class ListingsPresenter extends ProtectedPresenter {
                     
         $frm->onSuccess[] = array($this, 'editSuccess');
         $frm->onValidate[] = array($this, 'editValidate');
-        $frm->onSubmit[] = array($this, 'editSubmit');
         
         return $frm;    
     }
@@ -441,12 +472,11 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function actionEditListing($id){
                             
-        //TODO use ACL
-        if ($this->listings->getAuthor($id)['author'] !== $this->returnLogin()){
-            $this->redirect("Listings:in");
-        } else {
+        if ($this->isListingAuthor($id)){
            $this->actualListingValues = $this->listings->getActualListingValues($id);
            $this->postageOptions = $this->listings->getPostageOptions($id);
+        } else {       
+           $this->redirect("Listings:in");
         }
         
         $listingImages = $this->listings->getListingImages($id);
@@ -520,9 +550,15 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     	
         else {
-            $this->setListingSession($id);
-            $session = $this->getSession()->getSection('images');
-            $session->listingImages = $this->listings->getListingImages($id);
+            //in case that listing is not currently active
+            //redirect potentional viewer to his dashboard
+            if ($this->listings->isListingActive($id)){
+                $this->setListingSession($id);
+                $session = $this->getSession()->getSection('images');
+                $session->listingImages = $this->listings->getListingImages($id);
+            } else {
+                $this->redirect("Dashboard:in");
+            }
         }
     }
 
@@ -549,7 +585,11 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         else {
-            $this->setListingSession($id);
+            if ($this->listings->isListingActive($id)){
+                $this->setListingSession($id);
+            } else {
+                $this->redirect("Dashboard:in");
+            }
         } 
     }
 
@@ -573,11 +613,13 @@ class ListingsPresenter extends ProtectedPresenter {
         $quantity = $session->postageDetails['quantity'];
         $postage = $session->postageDetails['postage'];
         $buyerNotes = $form->getValues(TRUE)['notes'];
-        $date = date("j. n. Y");  
+        $date = date("j. n. Y"); 
+        $buyer = $this->returnLogin();
         
         $arguments  = array ("id" => $userid, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
-            "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes);
+            "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
+            "buyer" => $buyer, "status" => "pending");
 
         //and write new order to database
         $this->orders->writeOrderToDb($arguments);
@@ -643,14 +685,6 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public $id;
-    
-    public function editSubmit($form){
-        $values = $form->getValues(TRUE);
-        
-        $this->getSession()->getSection('postage')->values = $values;
-        $listingID = $this->getSession()->getSection('listing')->listingID;
-        $this->redirect("Listings:editListing", $listingID); 
-    }
     
     public function editSuccess($form){
         
