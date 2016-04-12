@@ -1,6 +1,20 @@
+{if $isVendor}
+    {if $pendingOrders}
+        <h3>Nevyřízené objednávky:</h3>
+        
+        {foreach $pendingOrders as $pendingOrder}
+            {$pendingOrder->product_name}
+            {$pendingOrder->quantity}
+            {$pendingOrder->date_ordered}
+            {$pendingOrder->status}
+            <a href="{link Orders:Process $pendingOrder->id}">Vyřídit objednávku</a>
+        {/foreach}
+    {/if}
+{/if}
+
 {if $orders}
+    <h3>Historie objednávek:</h3>
 {foreach $orders as $order}
-{dump $order}
 Product: {$order->product_name}
 Datum: {$order->date_ordered}
 {/foreach}

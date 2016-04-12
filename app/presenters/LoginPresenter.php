@@ -36,7 +36,7 @@ class LoginPresenter extends GuestPresenter
                  ->setBackgroundColor(\Nette\Utils\Image::rgb(240,240,240))  
                  ->setImageHeight(30) 
                  ->setImageWidth(0)  
-                 ->setExpire(100) 
+                 ->setExpire(10000) 
                  ->setFilterSmooth(false)
                  ->setFilterContrast(false)  
                  ->useNumbers(true);               
