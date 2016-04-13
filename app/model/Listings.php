@@ -6,8 +6,8 @@ use dibi;
 
 class Listings extends \DibiRow {
     
-    public function isVendor($id){
-       $q = dibi::select('vendor')->from('users')->where('id = %i', $id)->fetch();
+    public function isVendor($login){
+       $q = dibi::select('vendor')->from('users')->where('login = %s', $login)->fetch();
 
        if ($q['vendor'] == "yes"){
            return TRUE;
@@ -95,7 +95,8 @@ class Listings extends \DibiRow {
     }
     
     public function getAuthor($id){
-        return dibi::select('author')->from('listings')->where('id = %i', $id)->fetch();
+        $q = dibi::select('author')->from('listings')->where('id = %i', $id)->fetch();
+        return $q['author'];
     }
     
     public function getListingImages($id){

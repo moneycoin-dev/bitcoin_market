@@ -37,7 +37,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     private function isListingAuthor($id){
         //checks whether user is author of the listing
-        $listingAuthor = $this->listings->getAuthor($id)['author'];
+        $listingAuthor = $this->listings->getAuthor($id);
         $actualUser = $this->returnLogin();
         
         if ($listingAuthor == $actualUser){
@@ -296,7 +296,6 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $session = $this->getSession()->getSection('balance');
         $login =  $this->returnLogin();
-        $id = $this->getUser()->getIdentity()->getId();
   
         if ($session->balance > 1){
          
@@ -305,7 +304,7 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->redirect("Listings:in");
         } 
         
-        else if ($this->listings->isVendor($id)) {
+        else if ($this->listings->isVendor($login)) {
             //if user isalready vendor
             //redirect him in case he accidentaly visists
             //this page
@@ -586,7 +585,18 @@ class ListingsPresenter extends ProtectedPresenter {
         
         else {
             if ($this->listings->isListingActive($id)){
-                $this->setListingSession($id);
+                
+                //prevent buying from myself scenario
+                
+                $login = $this->returnLogin();
+                $listingAuthor = $this->listings->getAuthor($id);
+                
+                if ($login != $listingAuthor){
+                    $this->setListingSession($id);
+                } else {
+                    $this->redirect("Listings:view", $id);
+                }
+                
             } else {
                 $this->redirect("Dashboard:in");
             }
@@ -609,14 +619,14 @@ class ListingsPresenter extends ProtectedPresenter {
         //assemble argumets array
         $listingID = $session->listingDetails->id;
         $productName = $session->listingDetails['product_name'];
-        $userid = $this->returnId();
+        $author = $this->listings->getAuthor($listingID);
         $quantity = $session->postageDetails['quantity'];
         $postage = $session->postageDetails['postage'];
         $buyerNotes = $form->getValues(TRUE)['notes'];
         $date = date("j. n. Y"); 
         $buyer = $this->returnLogin();
         
-        $arguments  = array ("id" => $userid, "listing_id" => $listingID, 
+        $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
             "buyer" => $buyer, "status" => "pending");
@@ -832,9 +842,8 @@ class ListingsPresenter extends ProtectedPresenter {
     public function renderIn(){
         
         //render variables for single template - Listings:in    
-        $login = $this->getUser()->getIdentity()->login;
-        $id = $this->getUser()->getIdentity()->getId();
-        $this->template->isVendor = $this->listings->isVendor($id);
+        $login = $this->returnLogin();
+        $this->template->isVendor = $this->listings->isVendor($login);
         $this->template->listings = $this->listings->getListings($login);    
         $this->template->currentUser = $this->returnLogin();  
     }

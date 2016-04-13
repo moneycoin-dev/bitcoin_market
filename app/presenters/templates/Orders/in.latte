@@ -7,7 +7,7 @@
             {$pendingOrder->quantity}
             {$pendingOrder->date_ordered}
             {$pendingOrder->status}
-            <a href="{link Orders:Process $pendingOrder->id}">Vyřídit objednávku</a>
+            <a href="{link Orders:Process $pendingOrder->order_id}">Vyřídit objednávku</a>
         {/foreach}
     {/if}
 {/if}
