@@ -12,9 +12,9 @@
     {/if}
 {/if}
 
-{if $orders}
+{if $userOrders}
     <h3>Historie objednávek:</h3>
-{foreach $orders as $order}
+{foreach $userOrders as $order}
 Product: {$order->product_name}
 Datum: {$order->date_ordered}
 {/foreach}

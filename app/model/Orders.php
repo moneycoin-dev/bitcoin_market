@@ -6,12 +6,19 @@ use dibi;
 
 class Orders extends \DibiRow {
 
-    public function getUserOrders($login){
-        return dibi::select('*')->from('orders')->where('buyer = %s', $login)->fetchAll();
+    public function getOrders($login,$vendor = NULL){
+        if (!isset($vendor)){
+            return dibi::select('*')->from('orders')->where('buyer = %s', $login)
+                    ->fetchAll();
+        } else {
+            return dibi::select('*')->from('orders')->where('author = %s', $login)
+                    ->fetchAll();
+        }     
     }
     
     public function isOwner($id, $login){
-        $q =  dibi::select('author')->from('orders')->where('order_id = %i', $id)->fetch();
+        $q = dibi::select('author')->from('orders')->where('order_id = %i', $id)
+                ->fetch();
         
         if ($q['author'] == $login){
             return TRUE;
@@ -44,9 +51,14 @@ class Orders extends \DibiRow {
                 ->where('order_id = %i', $id)->fetch()['finalized'];
     }
     
+    public function orderFinalize($id){
+        dibi::update('orders', array('finalized' => 'yes'))
+                ->where('order_id = %i', $id)->execute();
+    }
+    
     public function getOrderDetails($id){
         return dibi::select('*')->from('orders')
-                ->where('order_id = %i', $id)->fetchAll();
+                ->where('order_id = %i', $id)->fetch();
     }
     
     public function writeSellerNotes($id, $notes){

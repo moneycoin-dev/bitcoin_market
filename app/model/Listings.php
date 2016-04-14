@@ -24,7 +24,8 @@ class Listings extends \DibiRow {
         dibi::insert('listings', array('author' => $id,  'product_name' => $values['product_name'],
             'product_desc' => $values['product_desc'],'ships_from' => $values['ships_from'],
             'ships_to' => $values['ships_to'], 'product_type' => $values['product_type'],
-            'product_images' => $imageLocations, 'price' => $values['price']))->execute();
+            'product_images' => $imageLocations, 'price' => $values['price'], 
+            'status' => 'disabled'))->execute();
         
         return dibi::getInsertId();
     }

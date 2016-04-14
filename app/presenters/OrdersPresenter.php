@@ -29,16 +29,29 @@ class OrdersPresenter extends ProtectedPresenter {
             return TRUE;
         } 
     }
+    
+    private function getOrderId(){
+        $session = $this->getSession()->getSection("orders");
+        return $session->orderID;
+    }
+    
+    private function setOrderId($id){
+        $session = $this->getSession()->getSection("orders");
+        $session->orderID = $id;
+    }
 
     public function beforeRender(){
         $login = $this->getUser()->getIdentity()->login;
         $isVendor = $this->listings->isVendor($login);
-        $orders = $this->orders->getUserOrders($login);
+        $userOrders = $this->orders->getOrders($login);
         $pendingOrders = array();
         
         if ($this->listings->isVendor($login)){
             
-            foreach($orders as $order){
+            $vendorOrders = $this->orders->getOrders($login, 1);
+            
+            foreach($vendorOrders as $order){
+
                 if ($order["status"] == "pending"){
                     array_push($pendingOrders, $order);
                 }
@@ -47,7 +60,7 @@ class OrdersPresenter extends ProtectedPresenter {
             $this->template->pendingOrders = $pendingOrders;
         }
         
-        $this->template->orders = $orders;
+        $this->template->userOrders = $userOrders;
         $this->template->isVendor = $isVendor;
     }
     
@@ -57,12 +70,14 @@ class OrdersPresenter extends ProtectedPresenter {
         $form->addTextArea("seller_notes", "Seller notes text:");
         $form->addSelect("status", "Status")->setItems(array("Decline", "Shipped"), FALSE);
         $form->addSubmit("submit", "Potvrdit");
-        $form->addSubmit("cancel", "Zpět na nevyřízené")->onClick[] = function(){
-  
-        };
+        $form->addSubmit("cancel", "Zpět na nevyřízené")->setValidationScope(false)
+             ->onClick[] = function(){
+            
+                $this->flashMessage("Vyřízení objednávky zrušeno.");
+                $this->redirect("Orders:in");
+            };
         
         $form->onSuccess[] = array($this, "processOrderSuccess");
-        $form->onValidate[] = array($this, "processOrderValidate");
         
         return $form;
     }
@@ -72,11 +87,16 @@ class OrdersPresenter extends ProtectedPresenter {
         $form = new Form();
         $form->addTextArea("buyer_notes", "Buyer notes:");
         $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
-  
+            
+            $id = $this->getOrderId();   
+            $this->orders->changeOrderStatus($id, "dispute");
+            $this->redirect("Orders:dispute", $id);
         };
         
         $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
-  
+            
+            $id = $this->getOrderId();
+            $this->orders->orderFinalize($id);
         };
          
         return $form;
@@ -96,33 +116,26 @@ class OrdersPresenter extends ProtectedPresenter {
         $values = $form->getValues(TRUE);
         
         if ($form['submit']->submittedBy){
-            $session = $this->getSession()->getSection("orders");
-            $id = $session->orderID;
+            
+            $id = $this->getOrderId();
             
             $this->orders->changeOrderStatus($id, $values['status']);
             $this->orders->writeSellerNotes($id, $values['seller_notes']);
             
-            unset($session->orderID);
+            unset($this->getSession()->getSection("orders")->orderID);
+            
+            $this->flashMessage("Objednávka úspěšně vyřízena!");
+            $this->redirect("Orders:in");
         }
-    }
-    
-    public function processOrderValidate($form){
-        
     }
     
     public function actionProcess($id){
         
        $login = $this->getUser()->getIdentity()->login;
        
-       if ($this->orders->isOwner($id, $login)){
-           
+       if ($this->orders->isOwner($id, $login)){     
            if ($this->orders->getOrderStatus($id) == "pending"){
-               
-               $session = $this->getSession()->getSection("orders");
-               $session->orderID = $id;
-
-               $form =  $this->getComponent("processOrderForm");
-               $form->render();          
+              $this->setOrderId($id); 
            } else {
                $this->redirect("Orders:in");
            }
@@ -130,5 +143,20 @@ class OrdersPresenter extends ProtectedPresenter {
        } else {
            $this->redirect("Orders:in");
        }    
+    }
+    
+    public function actionView($id){
+        
+        $this->setOrderId($id);
+        
+        $login = $this->getUser()->getIdentity()->login;
+        $order = $this->orders->getOrderDetails($id);
+        
+        if ($order['author'] == $login || $order['buyer'] == $login){
+            $this->template->isVendor = $this->listings->isVendor($login);
+            $this->template->orderInfo = $order;
+        } else {
+            $this->redirect("Orders:in");
+        }
     }
 }
