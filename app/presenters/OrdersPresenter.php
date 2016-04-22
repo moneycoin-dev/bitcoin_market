@@ -5,6 +5,7 @@ namespace App\Presenters;
 use App\Model\Orders;
 use App\Model\Listings;
 use Nette\Application\UI\Form;
+use Nette\Utils\Paginator;
 
 class OrdersPresenter extends ProtectedPresenter {
     
@@ -21,13 +22,7 @@ class OrdersPresenter extends ProtectedPresenter {
     
     public function isFinalized($id){
         
-        //check if order has been finalized
-        //used from template
-        if ($this->orders->getOrderDetails($id)['finalized'] == "no"){
-            return FALSE;
-        } else {
-            return TRUE;
-        } 
+        return $this->orders->isOrderFinalized($id);
     }
     
     private function getOrderId(){
@@ -40,48 +35,49 @@ class OrdersPresenter extends ProtectedPresenter {
         $session->orderID = $id;
     }
 
-    public function beforeRender(){
-        $login = $this->getUser()->getIdentity()->login;
-        $isVendor = $this->listings->isVendor($login);
-        $userOrders = $this->orders->getOrders($login);
-        $pendingOrders = array();
+    public function renderIn($page = 1){
         
-        if ($this->listings->isVendor($login)){
-            
-            $vendorOrders = $this->orders->getOrders($login, 1);
-            
-            foreach($vendorOrders as $order){
-
-                if ($order["status"] == "pending"){
-                    array_push($pendingOrders, $order);
-                }
-            }
-            
-            $this->template->pendingOrders = $pendingOrders;
+        $paginator = new Paginator();
+        $paginator->setItemsPerPage(2);
+        $paginator->setPage($page);
+        
+        $pagX = new Paginator();
+        $pagX->setItemsPerPage(2);
+        $pagX->setPage($page);
+      
+        $login = $this->getUser()->getIdentity()->login;
+        $pendingOrders = $this->orders->getOrders($login, $paginator, "pending");
+        $closedOrders = $this->orders->getOrders($login, $pagX, "closed");
+        
+        dump(count($pendingOrders));
+        dump(count($closedOrders));
+       
+        //set paginator itemCount after paginator was used in model
+        $paginator->setItemCount(count($pendingOrders));
+        $pagX->setItemCount(count($closedOrders));
+        
+        //store page count into session
+        //doesn't render paginator on subsequent pages without this code
+        $session = $this->getSession()->getSection("paginator");
+        
+        if (is_null($session->totalOrders)){
+            $session->totalOrders = $paginator->getPageCount();
         }
         
-        $this->template->userOrders = $userOrders;
-        $this->template->isVendor = $isVendor;
+        if (is_null($session->x)){
+            $session->x = $pagX->getPageCount();
+        }
+       
+        $this->template->totalOrders = $session->totalOrders; 
+        $this->template->x = $session->x;
+        $this->template->page = $page;
+        $this->template->pendingOrders = $pendingOrders;
+        $this->template->closedOrders = $closedOrders;
+
+        unset($session);
     }
     
-    public function createComponentProcessOrderForm() {
-        $form = new Form();
-        
-        $form->addTextArea("seller_notes", "Seller notes text:");
-        $form->addSelect("status", "Status")->setItems(array("Decline", "Shipped"), FALSE);
-        $form->addSubmit("submit", "Potvrdit");
-        $form->addSubmit("cancel", "Zpět na nevyřízené")->setValidationScope(false)
-             ->onClick[] = function(){
-            
-                $this->flashMessage("Vyřízení objednávky zrušeno.");
-                $this->redirect("Orders:in");
-            };
-        
-        $form->onSuccess[] = array($this, "processOrderSuccess");
-        
-        return $form;
-    }
-    
+
     public function createComponentFinalizeForm(){
         
         $form = new Form();
@@ -110,50 +106,16 @@ class OrdersPresenter extends ProtectedPresenter {
         
         return $form;
     }
-    
-    public function processOrderSuccess($form){
-        
-        $values = $form->getValues(TRUE);
-        
-        if ($form['submit']->submittedBy){
-            
-            $id = $this->getOrderId();
-            
-            $this->orders->changeOrderStatus($id, $values['status']);
-            $this->orders->writeSellerNotes($id, $values['seller_notes']);
-            
-            unset($this->getSession()->getSection("orders")->orderID);
-            
-            $this->flashMessage("Objednávka úspěšně vyřízena!");
-            $this->redirect("Orders:in");
-        }
-    }
-    
-    public function actionProcess($id){
-        
-       $login = $this->getUser()->getIdentity()->login;
-       
-       if ($this->orders->isOwner($id, $login)){     
-           if ($this->orders->getOrderStatus($id) == "pending"){
-              $this->setOrderId($id); 
-           } else {
-               $this->redirect("Orders:in");
-           }
-           
-       } else {
-           $this->redirect("Orders:in");
-       }    
-    }
-    
+
     public function actionView($id){
         
-        $this->setOrderId($id);
-        
+        $this->setOrderId($id);     
         $login = $this->getUser()->getIdentity()->login;
         $order = $this->orders->getOrderDetails($id);
         
-        if ($order['author'] == $login || $order['buyer'] == $login){
+        if ($order['buyer'] == $login || $order['author'] == $login){
             $this->template->isVendor = $this->listings->isVendor($login);
+            $this->template->isFinalized = $this->orders->isOrderFinalized($id);
             $this->template->orderInfo = $order;
         } else {
             $this->redirect("Orders:in");

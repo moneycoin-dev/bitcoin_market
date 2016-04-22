@@ -6,15 +6,17 @@ use dibi;
 
 class Orders extends \DibiRow {
 
-    public function getOrders($login,$vendor = NULL){
-        if (!isset($vendor)){
-            return dibi::select('*')->from('orders')->where('buyer = %s', $login)
-                    ->fetchAll();
-        } else {
-            return dibi::select('*')->from('orders')->where('author = %s', $login)
-                    ->fetchAll();
-        }     
+    public function getOrders($login, $paginator,$status , $sales = NULL){
+        
+       $ph = ' = %s';  
+       $string = isset($sales) ? 'author'. $ph : 'buyer' . $ph;
+       
+       return dibi::select('*')->from('orders')
+                ->where($string, $login)
+                ->where(array('status' => $status))
+                ->limit($paginator->getLength())->offset($paginator->getOffset());    
     }
+    
     
     public function isOwner($id, $login){
         $q = dibi::select('author')->from('orders')->where('order_id = %i', $id)
@@ -47,8 +49,14 @@ class Orders extends \DibiRow {
     }
     
     public function isOrderFinalized($id){
-        return dibi::select('finalized')->from('orders')
+        $q =  dibi::select('finalized')->from('orders')
                 ->where('order_id = %i', $id)->fetch()['finalized'];
+        
+        if ($q == "yes"){
+            return TRUE;
+        } else {
+            return FALSE;
+        }
     }
     
     public function orderFinalize($id){

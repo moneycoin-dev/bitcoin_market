@@ -1,0 +1,32 @@
+{if $pendingOrders}
+    <h3>Nevyřízené objednávky:</h3>
+    
+    {foreach $pendingOrders as $pendingOrder}
+        {$pendingOrder->product_name}
+        {$pendingOrder->quantity}
+        {$pendingOrder->date_ordered}
+        {$pendingOrder->status}
+        <a href="{link Sales:Process $pendingOrder->order_id}">Vyřídit objednávku</a>
+    {/foreach}
+
+    {for $i = 1; $i <= $totalOrders; $i++}
+        <a href="{link Sales:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+{else}
+    Nemáte žádné nevyřízené objednávky!
+{/if}
+
+{if $closedOrders}
+
+    {foreach $closedOrders as $closedOrder}
+        {$closedOrder->product_name}
+        {$closedOrder->quantity}
+        {$closedOrder->date_ordered}
+        {$closedOrder->status}
+    {/foreach}
+
+    {for $i = 1; $i <= $totalOrders; $i++}
+        <a href="{link Sales:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+
+{/if}

@@ -1,23 +1,28 @@
-{if $isVendor}
-    {if $pendingOrders}
-        <h3>Nevyřízené objednávky:</h3>
-        
-        {foreach $pendingOrders as $pendingOrder}
-            {$pendingOrder->product_name}
-            {$pendingOrder->quantity}
-            {$pendingOrder->date_ordered}
-            {$pendingOrder->status}
-            <a href="{link Orders:Process $pendingOrder->order_id}">Vyřídit objednávku</a>
-        {/foreach}
-    {/if}
+{if $pendingOrders}
+    <h3>Aktivní objednávky:</h3>
+    {foreach $pendingOrders as $order}
+        Product: <a href="{link Orders:view $order->order_id}">{$order->product_name}</a> 
+        Datum: {$order->date_ordered}
+        Množství: {$order->quantity }
+    {/foreach}
+
+    {for $i = 1; $i <= $totalOrders; $i++}
+        <a href="{link Orders:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+{else}
+        Nemáte žádné aktivní objednávky!
 {/if}
 
-{if $userOrders}
-    <h3>Historie objednávek:</h3>
-{foreach $userOrders as $order}
-Product: {$order->product_name}
-Datum: {$order->date_ordered}
-{/foreach}
-{else}
-Nemáte žádné objednávky!
+{if $closedOrders}
+    <h3>Uzavřené obchody:</h3>
+    {foreach $closedOrders as $corder}
+        Product: <a href="{link Orders:view $corder->order_id}">{$corder->product_name}</a> 
+        Datum: {$corder->date_ordered}
+        Množství: {$corder->quantity }
+    {/foreach}
+    
+    {for $i = 1; $i <= $x; $i++}
+        <a href="{link Orders:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+    
 {/if}

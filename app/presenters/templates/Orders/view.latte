@@ -1,2 +1,10 @@
-{control finalizeForm}
-{control partialReleaseForm}
+{if $isVendor}
+    {$orderInfo->date_ordered }
+    {$orderInfo->product_name }
+    {$orderInfo->buyer }
+    {$orderInfo->quantity }
+    {$orderInfo->status }
+{else}
+    {control finalizeForm}
+    {control partialReleaseForm}
+{/if}

@@ -16,18 +16,20 @@ class AuthorizatorFactory
         /* seznam uživatelských rolí */
         $permission->addRole('guest');
         $permission->addRole('registered');
-        $permission->addRole('admin', 'registered');
+        $permission->addRole('vendor', 'registered');
+        $permission->addRole('admin', 'registered', 'vendor');
 
         /* seznam zdrojů */
         $permission->addResource('dashboard');
         $permission->addResource('wallet');
-		$permission->addResource('messages');
+        $permission->addResource('messages');
         $permission->addResource('settings');
         $permission->addResource('login');
         $permission->addResource('register');
         $permission->addResource('listings');
         $permission->addResource('profile');
         $permission->addResource('orders');
+        $permission->addResource('sales');
 
         /* seznam pravidel oprávnění */
         $permission->allow('registered', 'dashboard', 'list');
@@ -37,6 +39,8 @@ class AuthorizatorFactory
         $permission->allow('registered', 'listings', 'list');
         $permission->allow('registered', 'profile', 'list');
         $permission->allow('registered', 'orders', 'list');
+        $permission->deny('registered', 'sales', 'list');
+        $permission->allow('vendor', 'sales', 'list');
         $permission->allow('guest', 'login', 'list');
         $permission->allow('guest', 'register', 'list');
         $permission->deny('registered', 'login', 'list');

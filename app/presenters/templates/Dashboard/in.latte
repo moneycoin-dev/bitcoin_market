@@ -9,8 +9,11 @@
 Přihlášen: <a n:href="Profile:View $login">{$login}</a>, <a n:href="Settings:in">Můj účet</a>,
 <a n:href="Messages:in">Soukromé zprávy</a>,
 <a n:href="Wallet:in">Deposit / WithDraw</a>
+<a n:href="Orders:in"> Orders </a>
+{if $isVendor == TRUE }
+<a n:href="Sales:in"> Sales </a>
 <a n:href="Listings:in">Listings</a>
-
+{/if}
 {control test}
 </div>
 <div id="content">

@@ -7,9 +7,9 @@ use dibi;
 class Listings extends \DibiRow {
     
     public function isVendor($login){
-       $q = dibi::select('vendor')->from('users')->where('login = %s', $login)->fetch();
+       $q = dibi::select('access_level')->from('users')->where('login = %s', $login)->fetch();
 
-       if ($q['vendor'] == "yes"){
+       if ($q['access_level'] == "vendor"){
            return TRUE;
        }
 
@@ -17,7 +17,7 @@ class Listings extends \DibiRow {
     }
 
     public function becomeVendor($id){
-        dibi::update('users', array('vendor' => 'yes'))->where('author = %i', $id)->execute();
+        dibi::update('users', array('access_level' => 'vendor'))->where('author = %i', $id)->execute();
     }
         
     public function createListing($id, array $values, $imageLocations){
