@@ -7,7 +7,7 @@
     {/foreach}
 
     {for $i = 1; $i <= $totalOrders; $i++}
-        <a href="{link Orders:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+        <a href="{link Orders:in, 'active' => $i, 'closed' => $closed  }">{if $i == $active}<strong>{$i}</strong>{else}{$i}{/if}</a>
     {/for}
 {else}
         Nemáte žádné aktivní objednávky!
@@ -21,8 +21,7 @@
         Množství: {$corder->quantity }
     {/foreach}
     
-    {for $i = 1; $i <= $x; $i++}
-        <a href="{link Orders:in $i}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {for $i = 1; $i <= $totalClosed; $i++}
+        <a href="{link Orders:in, 'active' => $active, 'closed' => $i }">{if $i == $closed}<strong>{$i}</strong>{else}{$i}{/if}</a>
     {/for}
-    
 {/if}

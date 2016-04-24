@@ -35,49 +35,46 @@ class OrdersPresenter extends ProtectedPresenter {
         $session->orderID = $id;
     }
 
-    public function renderIn($page = 1){
+    public function renderIn($active = 1, $closed = 1){
         
-        $paginator = new Paginator();
-        $paginator->setItemsPerPage(2);
-        $paginator->setPage($page);
+        $pagActive = new Paginator();
+        $pagActive->setItemsPerPage(2);
+        $pagActive->setPage($active);
         
-        $pagX = new Paginator();
-        $pagX->setItemsPerPage(2);
-        $pagX->setPage($page);
+        $pagClosed = new Paginator();
+        $pagClosed->setItemsPerPage(2);
+        $pagClosed->setPage($closed);
       
         $login = $this->getUser()->getIdentity()->login;
-        $pendingOrders = $this->orders->getOrders($login, $paginator, "pending");
-        $closedOrders = $this->orders->getOrders($login, $pagX, "closed");
-        
-        dump(count($pendingOrders));
-        dump(count($closedOrders));
+        $pendingOrders = $this->orders->getOrders($login, $pagActive, "pending");
+        $closedOrders = $this->orders->getOrders($login, $pagClosed, "closed");
        
         //set paginator itemCount after paginator was used in model
-        $paginator->setItemCount(count($pendingOrders));
-        $pagX->setItemCount(count($closedOrders));
+        $pagActive->setItemCount(count($pendingOrders));
+        $pagClosed->setItemCount(count($closedOrders));
         
         //store page count into session
         //doesn't render paginator on subsequent pages without this code
         $session = $this->getSession()->getSection("paginator");
         
         if (is_null($session->totalOrders)){
-            $session->totalOrders = $paginator->getPageCount();
+            $session->totalOrders = $pagActive->getPageCount();
         }
         
-        if (is_null($session->x)){
-            $session->x = $pagX->getPageCount();
+        if (is_null($session->totalClosed)){
+            $session->totalClosed = $pagClosed->getPageCount();
         }
        
         $this->template->totalOrders = $session->totalOrders; 
-        $this->template->x = $session->x;
-        $this->template->page = $page;
+        $this->template->totalClosed = $session->totalClosed;
+        $this->template->active = $active;
+        $this->template->closed = $closed;
         $this->template->pendingOrders = $pendingOrders;
         $this->template->closedOrders = $closedOrders;
 
         unset($session);
     }
     
-
     public function createComponentFinalizeForm(){
         
         $form = new Form();
