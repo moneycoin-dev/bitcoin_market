@@ -4,16 +4,19 @@ namespace App\Presenters;
 
 use App\Model\Orders;
 use Nette\Utils\Paginator;
+use Nette\Application\UI\Form;
 
 class SalesPresenter extends ProtectedPresenter {
-   /* 
-    public function startup() {
-        parent::startup();
-        
-        if (!$this->getUser()->isAllowed(strtolower($this->getName()), "list")) {
-            $this->redirect("Dashboard:in");
-        }
-    } */
+    
+    private function getOrderId(){
+        $session = $this->getSession()->getSection("orders");
+        return $session->orderID;
+    }
+    
+    private function setOrderId($id){
+        $session = $this->getSession()->getSection("orders");
+        $session->orderID = $id;
+    }
     
     protected $orders;
     
@@ -22,8 +25,6 @@ class SalesPresenter extends ProtectedPresenter {
     }
     
     public function renderOn($param = 1){
-        
-        dump($this->getName());
         
         $paginator = new Paginator();
         $paginator->setItemsPerPage(2);
@@ -72,11 +73,10 @@ class SalesPresenter extends ProtectedPresenter {
         $paginator->setItemsPerPage(4);
         $paginator->setPage($page);
         
-      
         $login = $this->getUser()->getIdentity()->login;
-       $pendingOrders = $this->orders->getOrders($login, $paginator, "pending", 1);
+        $pendingOrders = $this->orders->getOrders($login, "pending", $paginator, 1);
        
-       dump(count($pendingOrders));
+     //  dump(count($pendingOrders));
        
        
         //set paginator itemCount after paginator was used in model
@@ -90,12 +90,10 @@ class SalesPresenter extends ProtectedPresenter {
             $session->totalOrders = $paginator->getPageCount();
         }
         
-
-       
-       $closedOrders = $this->orders->getOrders($login, $paginator, "closed", 1);
+       $closedOrders = $this->orders->getOrders($login, "closed", $paginator, 1);
    
-        dump(count($closedOrders));
-        dump(count($pendingOrders));
+      //  dump(count($closedOrders));
+       // dump(count($pendingOrders));
 
         $this->template->closedOrders = $closedOrders;
         $this->template->pendingOrders = $pendingOrders;  

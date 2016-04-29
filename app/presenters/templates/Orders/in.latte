@@ -25,3 +25,12 @@
         <a href="{link Orders:in, 'active' => $active, 'closed' => $i }">{if $i == $closed}<strong>{$i}</strong>{else}{$i}{/if}</a>
     {/for}
 {/if}
+
+{if $disputes }
+    <h3>Aktivní Spory:</h3>
+    {foreach $disputes as $dispute}
+        Product: <a href="{link Orders:dispute $dispute->order_id}">{$dispute->product_name}</a> 
+        Datum: {$dispute->date_ordered}
+        Množství: {$dispute->quantity }
+    {/foreach}
+{/if}

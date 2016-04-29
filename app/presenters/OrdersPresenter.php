@@ -3,6 +3,7 @@
 namespace App\Presenters;
 
 use App\Model\Orders;
+use App\Services\PriceConverter;
 use App\Model\Listings;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
@@ -34,6 +35,10 @@ class OrdersPresenter extends ProtectedPresenter {
         $session = $this->getSession()->getSection("orders");
         $session->orderID = $id;
     }
+    
+    private function shippedStatus(){
+        return $this->orders->getOrderStatus($this->getOrderId());
+    }
 
     public function renderIn($active = 1, $closed = 1){
         
@@ -46,8 +51,9 @@ class OrdersPresenter extends ProtectedPresenter {
         $pagClosed->setPage($closed);
       
         $login = $this->getUser()->getIdentity()->login;
-        $pendingOrders = $this->orders->getOrders($login, $pagActive, "pending");
-        $closedOrders = $this->orders->getOrders($login, $pagClosed, "closed");
+        $pendingOrders = $this->orders->getOrders($login,"pending", $pagActive);
+        $closedOrders = $this->orders->getOrders($login, "closed", $pagClosed);
+        $disputes = $this->orders->getOrders($login, "dispute");
        
         //set paginator itemCount after paginator was used in model
         $pagActive->setItemCount(count($pendingOrders));
@@ -65,6 +71,7 @@ class OrdersPresenter extends ProtectedPresenter {
             $session->totalClosed = $pagClosed->getPageCount();
         }
        
+        $this->template->disputes = $disputes;
         $this->template->totalOrders = $session->totalOrders; 
         $this->template->totalClosed = $session->totalClosed;
         $this->template->active = $active;
@@ -79,29 +86,37 @@ class OrdersPresenter extends ProtectedPresenter {
         
         $form = new Form();
         $form->addTextArea("buyer_notes", "Buyer notes:");
-        $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
-            
-            $id = $this->getOrderId();   
-            $this->orders->changeOrderStatus($id, "dispute");
-            $this->redirect("Orders:dispute", $id);
-        };
         
-        $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
-            
-            $id = $this->getOrderId();
-            $this->orders->orderFinalize($id);
-        };
+        if ($this->shippedStatus() == "Shipped"){
+               
+            $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
+
+                $id = $this->getOrderId();   
+                $this->orders->changeOrderStatus($id, "dispute");
+                $this->redirect("Orders:dispute", $id);
+            };
+
+            $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
+
+                $id = $this->getOrderId();
+                $this->orders->orderFinalize($id);
+            };    
+        }
          
         return $form;
     }
     
     public function createComponentPartialReleaseForm(){
+        
         $form = new Form();
         
-        $form->addText("amount", "Částka k uvolnění:");
-        $form->addSubmit("submit", "Uvolnit");
+        if ($this->shippedStatus() == "Shipped"){
+           
+            $form->addText("amount", "Částka k uvolnění:");
+            $form->addSubmit("submit", "Uvolnit");
+        }
         
-        return $form;
+         return $form;
     }
 
     public function actionView($id){
@@ -109,11 +124,59 @@ class OrdersPresenter extends ProtectedPresenter {
         $this->setOrderId($id);     
         $login = $this->getUser()->getIdentity()->login;
         $order = $this->orders->getOrderDetails($id);
+        $buyer_notes = $this->orders->getNotesLeft($id);
         
-        if ($order['buyer'] == $login || $order['author'] == $login){
+       $this->getComponent("finalizeForm")->getComponents()["buyer_notes"]
+               ->setValue($buyer_notes);
+        
+        if ($order["buyer"] == $login || $order["author"] == $login){
             $this->template->isVendor = $this->listings->isVendor($login);
             $this->template->isFinalized = $this->orders->isOrderFinalized($id);
             $this->template->orderInfo = $order;
+        } else {
+            $this->redirect("Orders:in");
+        }
+        
+        $e = new \PriceConverter();
+        
+        echo $e->getPriceInCZK(0.1) . "CZK<br>";
+
+    }
+    
+    public function createComponentDisputeComplaint(){
+        $form = new Form();
+        $form->addTextArea("complaintMessage", "Text zprávy" );
+        $form->addSubmit("send", "Odeslat");
+        
+        $form->onSuccess[] = array($this, "sendComplaint");
+        
+        return $form;
+    }
+    
+    public function sendComplaint($form){
+       $values = $form->getValues(TRUE);
+       $id =  $this->getOrderId();     
+       $timestamp = time();
+       $autor = $this->getUser()->getIdentity()->login;
+       $this->orders->writeDisputeContents($id, $values['complaintMessage'],
+               $timestamp, $autor);
+
+       $this->redirect("Orders:dispute", $id);
+    }
+    
+    public function actionDispute($id){
+        
+        $login = $this->getUser()->getIdentity()->login;
+        $orderStatus = $this->orders->getOrderStatus($id);
+        $participants = $this->orders->getOrderParticipants($id);
+        
+        if ($orderStatus == "Shipped" || $orderStatus == "dispute"){
+            if ($login == $participants["author"] || $login == $participants["buyer"]){
+                $this->setOrderId($id);
+                $this->template->messages =  $this->orders->getDisputeContents($id);
+            } else {
+                $this->redirect("Orders:in");
+            }
         } else {
             $this->redirect("Orders:in");
         }

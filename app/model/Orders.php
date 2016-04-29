@@ -6,17 +6,25 @@ use dibi;
 
 class Orders extends \DibiRow {
 
-    public function getOrders($login, $paginator,$status , $sales = NULL){
+    public function getOrders($login, $status ,$paginator = NULL, $sales = NULL){
         
        $ph = ' = %s';  
        $string = isset($sales) ? 'author'. $ph : 'buyer' . $ph;
        
-       return dibi::select('*')->from('orders')
+       if (isset($paginator)){
+           
+            return dibi::select('*')->from('orders')
                 ->where($string, $login)
                 ->where(array('status' => $status))
-                ->limit($paginator->getLength())->offset($paginator->getOffset());    
+                ->limit($paginator->getLength())->offset($paginator->getOffset());
+
+       } else {
+           
+            return dibi::select('*')->from('orders')
+                ->where($string, $login)
+                ->where(array('status' => $status))->fetchAll();
+       }       
     }
-    
     
     public function isOwner($id, $login){
         $q = dibi::select('author')->from('orders')->where('order_id = %i', $id)
@@ -27,6 +35,11 @@ class Orders extends \DibiRow {
         } else {
             return FALSE;
         }
+    }
+    
+    public function getOrderParticipants($orderId){
+        return dibi::select('author, buyer')->from('orders')
+                ->where('order_id = %i', $orderId)->fetch();
     }
     
     public function writeOrderToDb(array $arguments){
@@ -72,5 +85,23 @@ class Orders extends \DibiRow {
     public function writeSellerNotes($id, $notes){
         dibi::update('orders', array('seller_notes' => $notes))
                 ->where('order_id = %i', $id)->execute();
+    }
+    
+    public function getNotesLeft($id, $seller = NULL){
+
+        $string = isset($seller) ? 'seller_notes' : 'buyer_notes';
+        
+        return dibi::select($string)->from('orders')
+              ->where('order_id = %i', $id)->fetch()[$string];    
+    }
+    
+    public function writeDisputeContents($order,$message,$timestamp, $autor){
+        dibi::insert('disputes', array('order' => $order, 'message' => $message,
+            'timestamp' => $timestamp, 'autor' => $autor))->execute();
+    }
+    
+    public function getDisputeContents($order){        
+        return dibi::query("SELECT * FROM [disputes] WHERE `order` = %i ORDER BY "
+                . "timestamp ASC", $order);
     }
 }
