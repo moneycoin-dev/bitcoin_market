@@ -3,7 +3,6 @@
 namespace App\Presenters;
 
 use App\Model\Orders;
-use App\Services\PriceConverter;
 use App\Model\Listings;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
@@ -136,11 +135,6 @@ class OrdersPresenter extends ProtectedPresenter {
         } else {
             $this->redirect("Orders:in");
         }
-        
-        $e = new \PriceConverter();
-        
-        echo $e->getPriceInCZK(0.1) . "CZK<br>";
-
     }
     
     public function createComponentDisputeComplaint(){

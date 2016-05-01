@@ -8,6 +8,7 @@ class Listings extends \DibiRow {
     
     public function isVendor($login){
        $q = dibi::select('access_level')->from('users')->where('login = %s', $login)->fetch();
+       
 
        if ($q['access_level'] == "vendor"){
            return TRUE;
@@ -16,8 +17,8 @@ class Listings extends \DibiRow {
        return FALSE;
     }
 
-    public function becomeVendor($id){
-        dibi::update('users', array('access_level' => 'vendor'))->where('author = %i', $id)->execute();
+    public function becomeVendor($login){
+        dibi::update('users', array('access_level' => 'vendor'))->where('login = %s', $login)->execute();
     }
         
     public function createListing($id, array $values, $imageLocations){
@@ -72,6 +73,19 @@ class Listings extends \DibiRow {
         return dibi::select('*')->from('postage')->where('listing_id = %i', $id)->fetchAll();
     }
     
+    public function verifyPostage($ids, $option, $price){
+        $q = dibi::select('*')->from('postage')->where(array('option' => $option))
+                ->where(array('price' => $price))->fetch();
+
+        if ($q){
+            if (in_array($q['postage_id'], $ids)){
+                return TRUE;
+            }
+        }
+ 
+        return FALSE;
+    }
+    
     public function deletePostageOption($id){
         return dibi::delete('postage')->where('postage_id = %i', $id)->execute();
     }
@@ -81,8 +95,9 @@ class Listings extends \DibiRow {
     }
     
     public function editListing($id, $values){
-        return dibi::update('listings', array('product_name' => $values['product_name'], 'product_desc' => $values['product_desc'],
-            'ships_from' => $values['ships_from'], 'ships_to' => $values['ships_to'], 'product_type' => $values['product_type'],
+        return dibi::update('listings', array('product_name' => $values['product_name'],
+            'product_desc' => $values['product_desc'],'ships_from' => $values['ships_from'],
+            'ships_to' => $values['ships_to'], 'product_type' => $values['product_type'],
             'price' => $values['price']))->where('id = %i', $id)->execute();
     }
     
@@ -101,7 +116,8 @@ class Listings extends \DibiRow {
     }
     
     public function getListingImages($id){
-        return unserialize(dibi::select('product_images')->from('listings')->where('id = %i', $id)->fetch()['product_images']);
+        return unserialize(dibi::select('product_images')->from('listings')->where('id = %i', $id)
+                ->fetch()['product_images']);
     }
     
     public function updateListingImages($id, $images){
@@ -133,8 +149,8 @@ class Listings extends \DibiRow {
         
         if ($q['status'] == "active"){
             return TRUE;
-        } else {
-            return FALSE;
         }
+        
+        return FALSE;
     }
 }

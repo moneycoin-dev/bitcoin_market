@@ -60,6 +60,15 @@ class PriceConverter {
         return $priceCZK;
     }
     
+    public function convertCzkToBTC($czkPrice){
+        $usdPerBTC = $this->getBtcToUSD();
+        $czkPerUSD = $this->getCzkToUSD();   
+        $czkToUSD = $czkPrice / $czkPerUSD;
+        $priceBTC = $czkToUSD / $usdPerBTC;
+        
+        return $priceBTC;
+    }
+    
     public function __destruct(){
         curl_close($this->connection);
     }

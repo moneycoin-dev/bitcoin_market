@@ -126,6 +126,21 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
+    private function getBalance(){
+        
+        $login = $this->getUser()->getIdentity()->login;
+        $btcClient = $this->btcClient;
+        $command = new Command('getbalance', $login);             
+        $response = $btcClient->sendCommand($command);
+        $result = json_decode($response->getBody()->getContents(), true);
+        
+        return $result['result'];
+    }
+    
+    private function listSess(){
+        return $this->getSession()->getSection('listing');
+    }
+    
     public function compareComponentName($name){
         
         //component name comparator called from template
@@ -294,10 +309,9 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleVendor(){
         
-        $session = $this->getSession()->getSection('balance');
         $login =  $this->returnLogin();
   
-        if ($session->balance > 1){
+        if ($this->getBalance() > 1){
          
             $this->listings->becomeVendor($login);
             $this->flashMessage("Váš účet má nyní vendor status");
@@ -481,7 +495,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $listingImages = $this->listings->getListingImages($id);
         $imgSession = $this->getSession()->getSection('images');
         $imgSession->listingImages = $listingImages;
-        $listingSession = $this->getSession()->getSection('listing');
+        $listingSession = $this->listSess();
         $listingSession->listingID = $id;
     }
 
@@ -526,7 +540,7 @@ class ListingsPresenter extends ProtectedPresenter {
     //stores actual listing values into session
     private function setListingSession($id){
         $listingDetails = $this->listings->getActualListingValues($id);
-    	$session = $this->getSession()->getSection('listing');
+    	$session = $this->listSess();
     	$session->listingDetails = $listingDetails;
     }
     
@@ -614,7 +628,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function vendorNotesSuccess($form){
         
-        $session = $this->getSession()->getSection('listing');
+        $session = $this->listSess();
 
         //assemble argumets array
         $listingID = $session->listingDetails->id;
@@ -624,12 +638,12 @@ class ListingsPresenter extends ProtectedPresenter {
         $postage = $session->postageDetails['postage'];
         $buyerNotes = $form->getValues(TRUE)['notes'];
         $date = date("j. n. Y"); 
-        $buyer = $this->returnLogin();
-        
+        $buyer = $this->returnLogin();   
+          
         $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
-            "buyer" => $buyer, "status" => "pending");
+            "buyer" => $buyer, "status" => "pending", "final_price" => $session->finalPrice);
 
         //and write new order to database
         $this->orders->writeOrderToDb($arguments);
@@ -654,7 +668,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleSetMainImage($imgNum){
         
-        $listingID = $this->getSession()->getSection('listing')->listingID;     
+        $listingID = $this->getSession()->getSection("listing")->listingID;     
         $this->listings->setListingMainImage($listingID, $imgNum);
     }
     
@@ -662,36 +676,77 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $form = new Nette\Application\UI\Form;
         
-        $listingID =  $this->getSession()->getSection('listing')->listingDetails->id;
+        $session = $this->getSession()->getSection("listing");
+        $listingID = $session->listingDetails->id;
         
         $postageOptionsDB = $this->listings->getPostageOptions($listingID);
         $postageOptions = array();
+        $postageIDs = array();
         
         foreach($postageOptionsDB as $option){
-            array_push($postageOptions, $option['option'] . "+" . $option['price'] . "Kč");
+            array_push($postageOptions, $option["option"] . " +" . $option["price"] . "Kč");
+            array_push($postageIDs, $option["postage_id"]);
         }
         
+        asort($postageIDs);
+        
+        //store for later check, that selectbox was not maliciously altered
+        $session->postageIDs = $postageIDs;
+         
         $form->addSelect("postage", "Možnosti zásilky:")->setItems($postageOptions, FALSE);
          //    ->addRule($form::FILLED, "Vyberte prosím některou z možností zásilky.");
         
         $form->addText('quantity', 'Množství:')
              ->addRule($form::FILLED, "Vyplňte prosím množství.")
-             ->addRule($form::INTEGER, 'Množství musí být číslo')
-             ->addRule($form::RANGE, 'Množství 1 až 99 maximum.', array(1, 99));
-        
+             ->addRule($form::INTEGER, "Množství musí být číslo")
+             ->addRule($form::RANGE, "Množství 1 až 99 maximum.", array(1, 99));
+       
         $form->addSubmit("koupit", "Koupit");
         
-        $form->onSuccess[] = array($this, 'buyFormOnSuccess');
+        $form->onSuccess[] = array($this, "buyFormOnSuccess");
+        $form->onValidate[] = array($this, "buyFormValidate");
         
         return $form;
     }
     
     public function buyFormOnSuccess($form){
-        $session = $this->getSession()->getSection('listing');
+        $session = $this->getSession()->getSection("listing");
         $listingID = $session->listingDetails->id;
         $session->postageDetails = $form->getValues(TRUE);
         
         $this->redirect("Listings:Buy", $listingID);
+    }
+    
+    public function buyFormValidate($form){
+        
+        //parse selectbox value
+        $postageString = str_replace(" ","",$form->values->postage);
+        $extractedOption = substr($postageString, 0, strpos($postageString, "+"));
+        $extractedPostagePrice = intval(substr($postageString, strpos($postageString, "+")+1, -3));
+        
+        $session = $this->listSess();
+        
+        $ids = $session->postageIDs;
+        unset($this->getSession()->getSection("listing")->postageIDs);
+        
+        //check that selectbox has not been altered
+        if (!$this->listings->verifyPostage($ids, $extractedOption, $extractedPostagePrice)){
+            $form->addError("Detekována modifikace hodnoty selectboxu!");
+        }
+        
+        $listingDetails = $session->listingDetails;
+        
+        //price conversions and user balance check
+        $converter = new \PriceConverter();
+        $postageBTC = $converter->convertCzkToBTC($extractedPostagePrice);
+        $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
+        $finalPrice = $listingBTC + $postageBTC;
+        $session->finalPrice = $finalPrice;
+        $userBalance = $this->getBalance();
+        
+        if (!($userBalance >= $finalPrice)){
+            $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
+        }
     }
     
     public $id;
@@ -766,17 +821,6 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function beforeRender(){
-        
-        $login = $this->getUser()->getIdentity()->login;
-
-        //query bitcoind, get response
-        $btcClient = $this->btcClient;
-        $command = new Command('getbalance', $login);             
-        $response = $btcClient->sendCommand($command);
-        $result = json_decode($response->getBody()->getContents(), true);
-
-        $section =  $this->getSession()->getSection('balance');
-        $section->balance = $result['result'];
 
         //render edit form with actual values from database
         $component_iterator = $this->getComponent("editForm")->getComponents();
