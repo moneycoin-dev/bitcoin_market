@@ -4,10 +4,12 @@ namespace App\Presenters;
 
 use Nette;
 use App\BitcoindAuth as BTCAuth;
+use App\Model\Wallet;
 
 abstract class BasePresenter extends Nette\Application\UI\Presenter
 {
-    public $btcClient;  
+
+    public $wallet;
 
     protected function startup(){
 
@@ -15,6 +17,7 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         $auth = new BTCAuth();
         $client = $auth->btcd;
-        $this->btcClient = $client;
+        $this->btcClient = $client; 
+        $this->wallet = new Wallet($client);
     }
 }

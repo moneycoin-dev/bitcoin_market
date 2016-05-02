@@ -21,12 +21,11 @@ class Listings extends \DibiRow {
         dibi::update('users', array('access_level' => 'vendor'))->where('login = %s', $login)->execute();
     }
         
-    public function createListing($id, array $values, $imageLocations){
-        dibi::insert('listings', array('author' => $id,  'product_name' => $values['product_name'],
-            'product_desc' => $values['product_desc'],'ships_from' => $values['ships_from'],
-            'ships_to' => $values['ships_to'], 'product_type' => $values['product_type'],
-            'product_images' => $imageLocations, 'price' => $values['price'], 
-            'status' => 'disabled'))->execute();
+    public function createListing(array $values){
+        
+        $values["status"] = "disabled";
+        
+        dibi::insert('listings', $values)->execute();
         
         return dibi::getInsertId();
     }
@@ -95,10 +94,7 @@ class Listings extends \DibiRow {
     }
     
     public function editListing($id, $values){
-        return dibi::update('listings', array('product_name' => $values['product_name'],
-            'product_desc' => $values['product_desc'],'ships_from' => $values['ships_from'],
-            'ships_to' => $values['ships_to'], 'product_type' => $values['product_type'],
-            'price' => $values['price']))->where('id = %i', $id)->execute();
+        return dibi::update('listings', $values)->where('id = %i', $id)->execute();
     }
     
     public function deleteListing($id){
@@ -148,6 +144,28 @@ class Listings extends \DibiRow {
         $q = dibi::select('status')->from('listings')->where('id = %i', $id)->fetch();
         
         if ($q['status'] == "active"){
+            return TRUE;
+        }
+        
+        return FALSE;
+    }
+    
+    public function isListingFE($id){
+        $q = dibi::select('FE')->from('listings')
+                ->where('id = %i', $id)->fetch()['FE'];
+        
+        if ($q == "yes"){
+            return TRUE;
+        }
+        
+        return FALSE;
+    }
+    
+    public function isListingMultisig($id){
+        $q = dibi::select('MS')->from('listings')
+                ->where('id = %i', $id)->fetch()['MS'];
+        
+        if ($q == "yes"){
             return TRUE;
         }
         

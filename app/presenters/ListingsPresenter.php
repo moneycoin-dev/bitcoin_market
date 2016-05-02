@@ -5,9 +5,9 @@ namespace App\Presenters;
 use Nette;
 use App\Model\Listings;
 use App\Model\Orders;
+use App\Model\UserManager;
 use App\Forms\ListingFormFactory;
 use App\Forms\VendorNotesFactory;
-use Nbobtc\Command\Command;
 
 class ListingsPresenter extends ProtectedPresenter {
     
@@ -126,15 +126,14 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
-    private function getBalance(){
+    private function constructCheckboxList($form){
+        $listingOptions = array("ms" => "Multisig");
         
-        $login = $this->getUser()->getIdentity()->login;
-        $btcClient = $this->btcClient;
-        $command = new Command('getbalance', $login);             
-        $response = $btcClient->sendCommand($command);
-        $result = json_decode($response->getBody()->getContents(), true);
+        if($this->userManager->hasFEallowed($this->returnLogin())){
+            $listingOptions["fe"] = "Finalize Early";
+        }
         
-        return $result['result'];
+        return $form->addCheckboxList("listingOptions", "Options", $listingOptions);
     }
     
     private function listSess(){
@@ -186,6 +185,12 @@ class ListingsPresenter extends ProtectedPresenter {
         }     
     }
     
+    protected $userManager;
+
+    public function injectUserManager(UserManager $um){
+        $this->userManager = $um;
+    }
+    
     public function injectBaseModels(Listings $list){
         $this->listings = $list;
     }
@@ -210,6 +215,8 @@ class ListingsPresenter extends ProtectedPresenter {
     public function createComponentListingForm(){
         
         $form = $this->formFactory->create();
+        
+        $this->constructCheckboxList($form);  
         $form->addSubmit("submit", "Vytvořit");
         $form->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function (){
             
@@ -258,33 +265,64 @@ class ListingsPresenter extends ProtectedPresenter {
         return $form;
     }
     
-    public function listingCreate($form){
+    private function getProcValues($values, $type = NULL){
         
-        //do things only if submited by "create button"
+        //add listing author to values
+        $values['author'] = $this->returnLogin();
+
+        //add type of listing to values according to checkboxes set
+        if (in_array("ms", $values["listingOptions"])){
+            $values["MS"] = "yes";
+        } else {
+            $values["MS"] = "no";
+        }
+
+        if (in_array("fe", $values["listingOptions"])){
+            $values["FE"] = "yes";
+        } else {
+            $values["FE"] = "no";
+        }
+
+        //pass to DB - no existing column
+        unset($values["listingOptions"]);
+
+        $imageLocations = array();
+        $images = $values['image'];
+
+        //pass to DB - no existing column
+        unset($values['image']);
+
+        foreach ($images as $image){
+            //get relative path to image for webserver &
+            //save relative paths into array
+            array_push($imageLocations, substr($image->getTemporaryFile(),
+                    strpos($image->getTemporaryFile(), "userfiles/")));     
+        }
+        
+        if (!isset($type)){
+            //serialize img locations to store it in one field in db
+            $imgLocSerialized = serialize($imageLocations);
+            $values['product_images'] = $imgLocSerialized;
+        } else {
+            //edit listing branch
+            $values['imageLocations'] = $imageLocations;
+        }
+        
+        return $values;
+    }
+    
+    public function listingCreate($form){
+       
+        ///do things only if submited by "create button"
         if (!$form['add_postage']->submittedBy){
             
             //things to do when form is submitted by create button
             //unset postage textbox counter on success
             unset($this->getSession()->getSection('postage')->counter);
             
-            $values = $form->getValues(True);
-            $id = $this->getUser()->getIdentity()->login;
-
-            $imageLocations = array();
-            $images = $form->values['image'];
-
-            foreach ($images as $image){
-                //get relative path to image for webserver &
-                //save relative paths into array
-                array_push($imageLocations, substr($image->getTemporaryFile(),
-                        strpos($image->getTemporaryFile(), "userfiles/")));     
-            }
-
-            //serialize img locations to store it in one field in db
-            $imgLocSerialized = serialize($imageLocations);
-            
+            $values = $this->getProcValues($form->getValues(True));
             $postage = $this->returnPostageArray($values);
-            $listingID = $this->listings->createListing($id, $values, $imgLocSerialized);
+            $listingID = $this->listings->createListing($values);
             
             if (!empty($postage['options'])){
                 $this->listings->writeListingPostageOptions($listingID, $postage);
@@ -311,7 +349,7 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $login =  $this->returnLogin();
   
-        if ($this->getBalance() > 1){
+        if ($this->wallet->getBalance($login) > 1){
          
             $this->listings->becomeVendor($login);
             $this->flashMessage("Váš účet má nyní vendor status");
@@ -424,14 +462,36 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function createComponentEditForm(){
         $frm = $this->formFactory->create();
+        $listingID = $this->getSession()->getSection('listing')->listingID;
+        
+        //query database for listing type
+        $FE = $this->listings->isListingFE($listingID);
+        $MS = $this->listings->isListingMultisig($listingID);
+        
+        //checkbox value rendering logic
+        $checkVal = array();
+        
+        if ($MS){
+            $checkVal["ms"] = "ms";
+        }
+        
+        if ($FE){
+            $checkVal["fe"] = "fe";
+        }
+        
+        $this->constructCheckboxList($frm)->setValue($checkVal);
+        
+        //discard option array
+        unset($checkVal);
+
         $cnt = count ($this->postageOptions);  
         $session = $this->getSession()->getSection("postage");
 
         
         for ($i = 0; $i<$cnt; $i++){
 
-                $frm->addText("postage" . $i, "Doprava");
-                $frm->addText("pprice" . $i, "Cena dopravy");
+            $frm->addText("postage" . $i, "Doprava");
+            $frm->addText("pprice" . $i, "Cena dopravy");
 
         }
             
@@ -451,7 +511,7 @@ class ListingsPresenter extends ProtectedPresenter {
         }
           
         $frm->addSubmit("submit", "Upravit");
-        $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function(){
+        $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function() use($listingID) {
             
             //inline onlclick handler, that counts postage options
             $session = $this->getSession()->getSection('postage');
@@ -466,7 +526,6 @@ class ListingsPresenter extends ProtectedPresenter {
             $form = $this->getComponent("editForm");
             $session->values = $form->getValues(TRUE);
             
-            $listingID = $this->getSession()->getSection('listing')->listingID;
             $this->redirect("Listings:editListing", $listingID);
         };
            
@@ -742,7 +801,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
         $finalPrice = $listingBTC + $postageBTC;
         $session->finalPrice = $finalPrice;
-        $userBalance = $this->getBalance();
+        $userBalance = $this->wallet->getBalance($this->returnLogin());
         
         if (!($userBalance >= $finalPrice)){
             $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
@@ -757,22 +816,12 @@ class ListingsPresenter extends ProtectedPresenter {
             
             unset($this->getSession()->getSection('postage')->counterEdit);
 
-            $id = $this->actualListingValues['id'];
+            $values = $this->getProcValues($form->getValues(TRUE), "edit");
             $listingID = $this->getSession()->getSection('listing')->listingID;
-            $values = $form->getValues();
-
-            $form_images = $form->values['image'];
-            $imageLocations = array();
-
-            foreach ($form_images as $image){
-            //get relative path to image for webserver &
-            //save relative paths into array
-                array_push($imageLocations, substr($image->getTemporaryFile(),
-                        strpos($image->getTemporaryFile(), "userfiles/")));     
-            }
-
             $existingImages = $this->listings->getListingImages($listingID);
-            $new_images = serialize(array_merge($imageLocations, $existingImages));
+            $new_images = serialize(array_merge($values["imageLocations"], $existingImages));
+            
+            unset($values["imageLocations"]);
 
             $postageToUpdate = $this->returnPostageArray($values);
             $postageFromDB = $this->listings->getPostageOptions($listingID);
@@ -797,6 +846,7 @@ class ListingsPresenter extends ProtectedPresenter {
                 $cnt++; 
             }
             
+            $id = $this->actualListingValues['id'];
             $postageAdditional = $this->returnPostageArray($values, TRUE);
             
             if (!empty($postageAdditional['options'])){

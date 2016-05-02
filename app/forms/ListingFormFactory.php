@@ -8,6 +8,7 @@ use Nette\Application\UI\Form;
 class ListingFormFactory extends Nette\Object
 {
 
+
 	/**
 	 * @return Form
 	 */
@@ -22,7 +23,7 @@ class ListingFormFactory extends Nette\Object
         $form->addSelect('product_type', 'Product type:', array("Physical package", "Digital Package"));
         $form->addText('price', 'Price:');
         $form->addUpload('image', 'Product image:', TRUE);
-
+        
         return $form;
 	}
 }

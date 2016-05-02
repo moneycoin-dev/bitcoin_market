@@ -4,6 +4,7 @@ namespace App\Presenters;
 
 use App\Model\Orders;
 use App\Model\Listings;
+use App\Model\Configuration;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
 
@@ -117,8 +118,17 @@ class OrdersPresenter extends ProtectedPresenter {
         
          return $form;
     }
+    
+    protected $cm;
+    
+    public function injectX(Configuration $cm){
+        $this->cm = $cm;
+    }
 
     public function actionView($id){
+        
+       // $this->cm->changeWithdrawalsState("enabled");
+        dump($this->cm->areWithdrawalsEnabled());
         
         $this->setOrderId($id);     
         $login = $this->getUser()->getIdentity()->login;

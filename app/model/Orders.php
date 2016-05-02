@@ -56,11 +56,6 @@ class Orders extends \DibiRow {
                 ->where('order_id = %i', $id)->fetch()['status'];
     }
     
-    public function isOrderFE($id){
-        return dibi::select('FE')->from('orders')
-                ->where('order_id = %i', $id)->fetch()['FE'];
-    }
-    
     public function isOrderFinalized($id){
         $q =  dibi::select('finalized')->from('orders')
                 ->where('order_id = %i', $id)->fetch()['finalized'];

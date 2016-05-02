@@ -2,32 +2,8 @@
 
 namespace App\Presenters;
 
-use App\Model\Wallet;
-use Nbobtc\Command\Command;
-
 class WalletPresenter extends ProtectedPresenter {
-    
-    /** @var Model\Wallet */
-    protected $wallet;
 
-    public function injectBaseModels(Wallet $wallet)
-    {
-        $this->wallet = $wallet;
-    }
-    
-    private function generateAddress($login){
-        
-        //generate new address for existing account
-        //btc command object
-        $command = new Command('getnewaddress', $login);
-        
-        //response handling
-        $response = $this->btcClient->sendCommand($command);
-        $result = json_decode($response->getBody()->getContents(), true);
-        
-        return $result;
-    }
-    
     private function redirector(){
         $this->flashMessage("Akce proběhla úspěšně.");
         $this->redirect("Wallet:in");
@@ -51,7 +27,10 @@ class WalletPresenter extends ProtectedPresenter {
         //if last request is null, immediately generate new adress
         //user didn't used generation yet
         if (is_null($lastRequested)){
-           $this->wallet->writeNewBtcAddress($this->generateAddress($login)['result'], $login, $dateToSave);
+            
+           $this->wallet->writeNewBtcAddress(
+                   $this->wallet->generateAddress($login), $login, $dateToSave);
+           
            $this->redirector();
         } else {
             
@@ -65,23 +44,18 @@ class WalletPresenter extends ProtectedPresenter {
             } else {
                 
                 //if 5 hours passed then generate and write new adress to db
-                $this->wallet->writeNewBtcAddress($this->generateAddress($login)['result'], $login, $dateToSave);
+                $this->wallet->writeNewBtcAddress(
+                        $this->wallet->generateAddress($login), $login, $dateToSave);
+                
                 $this->redirector();
             }
         }
     }
 
     public function beforeRender() {
-        //get user login to check balance
+      
         $login = $this->getUser()->getIdentity()->login;
-
-        //query bitcoind, get response
-        $command = new Command('getbalance', $login);             
-        $response = $this->btcClient->sendCommand($command);
-        $result = json_decode($response->getBody()->getContents(), true);
-
-        //render btc adress from db, bitcoind response
         $this->template->walletAddress = $this->wallet->getBtcAddress($login);
-        $this->template->balance = $result['result'];          
+        $this->template->balance = $this->wallet->getBalance($login);          
     }
 }
