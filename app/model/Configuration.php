@@ -4,41 +4,48 @@ namespace App\Model;
 
 use dibi;
 
+
 class Configuration extends \DibiRow {
 
-	public function enableMaitenanceMode(){
+    public function changeMarketMode($mode){
 
-		dibi::update("config", array("value" => "on"))
-			->where(array("option" => "maitenance"))->execute();
-	}
+        dibi::update("config", array("value" => $mode))
+                ->where(array("option" => "maitenance"))->execute();
+    }
 
-	public function isMarketInMaintenanceMode(){
+    public function isMarketInMaintenanceMode(){
 
-		$q = dibi::select("value")->from("config")
-			->where(array("option" => "maitenance"))->fetch()["value"];
+        $q = dibi::select("value")->from("config")
+                ->where(array("option" => "maitenance"))->fetch()["value"];
 
-		if ($q == "on"){
-			return TRUE;
-		}
+        if ($q == "on"){
+                return TRUE;
+        }
 
-		return FALSE;
-	}
+        return FALSE;
+    }
 
-	public function changeWithdrawalState($state){
+    public function changeWithdrawalState($state){
 
-		dibi::update("config", array("value" => $state))
-			->where(array("option" => "withdrawals"))->execute();
-	}
+        dibi::update("config", array("value" => $state))
+                ->where(array("option" => "withdrawals"))->execute();
+    }
 
-	public function areWithdrawalsEnabled(){
+    public function areWithdrawalsEnabled(){
 
-		$q = dibi::select("value")->from("config")
-			->where(array("option" => "withdrawals"))->fetch()["value"];
+        $q = dibi::select("value")->from("config")
+                ->where(array("option" => "withdrawals"))->fetch()["value"];
 
-		if ($q == "enabled"){
-			return TRUE;
-		}
+        if ($q == "enabled"){
+                return TRUE;
+        }
 
-		return FALSE;
-	}
+        return FALSE;
+    }
+    
+    public function setEscrowAddress($address){
+        
+        dibi::update("config", array("value" => $address))
+                ->where(array("option" => "escrow_address"))->execute();
+    }
 }

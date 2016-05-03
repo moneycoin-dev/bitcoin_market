@@ -3,7 +3,6 @@
 namespace App\Model;
 
 use dibi;
-use Nbobtc\Command\Command;
 
 class Wallet extends \DibiRow
 {
@@ -13,13 +12,32 @@ class Wallet extends \DibiRow
         $this->btcClient = $bc;
     }
     
-    private function command($string, $login = NULL){
+    public function command($string, $arg = NULL, array $args = NULL){
         
-        $command = new Command($string, $login);
+        //we always have at least one argument 
+        //daemon operation
+        $arguments = array($string);
+        
+        if (isset($arg)){
+            array_push($arguments, $arg);
+        }
+        
+        if (isset($args)){
+            foreach($args as $arg){
+                array_push($arguments, $arg);
+            }
+        }
+        
+        //one argument as string or array of string arguments
+        //can be passed to this function to instantiate Nbobtc\Command
+        //implemeted using reflection
+        
+        $reflect  = new \ReflectionClass("Nbobtc\Command\Command");
+        $command = $reflect->newInstanceArgs($arguments);
         $response = $this->btcClient->sendCommand($command);
         $result = json_decode($response->getBody()->getContents(), true); 
         
-        return $result["result"];
+        return $result;
     }
 	
     public function getBtcAddress($login){
@@ -39,17 +57,33 @@ class Wallet extends \DibiRow
                 ->where("login = %s", $login)->fetch()["address_request_time"];
     }
     
-    public function getBalance($login){
+    public function getBalance($account){
                 
-        return $this->command("getbalance", $login);
+        return $this->command("getbalance", $account);
     }
     
-    public function generateAddress($login){
+    public function generateAddress($account){
         
-        return $this->command("getnewaddress", $login);
+        return $this->command("getnewaddress", $account);
     }
     
-    public function transfer($amount, $address){
+    public function validateAddress($address){
         
+        return $this->command("validateaddress", $address);
+    }
+    
+    public function getTransaction($txID){
+        
+        return $this->command("gettransaction", $txID);
+    }
+    
+    public function moveFunds($fromAccount, $toAccount, $ammount, $comment = NULL){
+        
+        return $this->command("move", func_get_args());
+    }
+    
+    public function sendFunds($fromAccount, $btcAddress){
+        
+        return $this->command("sendfrom", func_get_args());
     }
 }

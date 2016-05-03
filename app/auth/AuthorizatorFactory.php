@@ -30,6 +30,7 @@ class AuthorizatorFactory
         $permission->addResource('profile');
         $permission->addResource('orders');
         $permission->addResource('sales');
+        $permission->addResource('administration');
 
         /* seznam pravidel oprávnění */
         $permission->allow('registered', 'dashboard', 'list');

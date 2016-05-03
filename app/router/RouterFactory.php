@@ -29,6 +29,8 @@ class RouterFactory
                 $router[] = new Route('settings', 'Settings:in');
                 $router[] = new Route('messages', 'Messages:in');
                 $router[] = new Route('wallet', 'Wallet:in');
+                $router[] = new Route('administration', 'Administration:in');
+                $router[] = new Route('<presenter>/<action>', 'Administration:Global');
                          
 		return $router;
 	}

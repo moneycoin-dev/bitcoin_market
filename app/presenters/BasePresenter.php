@@ -17,7 +17,6 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         $auth = new BTCAuth();
         $client = $auth->btcd;
-        $this->btcClient = $client; 
         $this->wallet = new Wallet($client);
     }
 }
