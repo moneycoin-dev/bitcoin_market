@@ -8,6 +8,14 @@ use App\Model\Configuration;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
 
+/**
+ * 
+ * @what Vendor & User order viewer Implementation
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class OrdersPresenter extends ProtectedPresenter {
     
     protected $orders;

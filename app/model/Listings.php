@@ -4,21 +4,23 @@ namespace App\Model;
 
 use dibi;
 
-class Listings extends \DibiRow {
-    
+/**
+ * 
+ * @what Listings data model class
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
+class Listings extends BaseModel {
+        
     public function isVendor($login){
-       $q = dibi::select('access_level')->from('users')->where('login = %s', $login)->fetch();
-       
-
-       if ($q['access_level'] == "vendor"){
-           return TRUE;
-       }
-
-       return FALSE;
+       $q = $this->valSelect("access_level", "users", "login", $login);
+       return $this->checker($q, "vendor");
     }
 
-    public function becomeVendor($login){
-        dibi::update('users', array('access_level' => 'vendor'))->where('login = %s', $login)->execute();
+    public function becomeVendor($login){        
+        $this->updater("users", array('access_level' => 'vendor'), "login", $login);
     }
         
     public function createListing(array $values){
@@ -56,20 +58,20 @@ class Listings extends \DibiRow {
         //decided not to use collision insert technique
         foreach ($values as $value){
             
-            if (array_key_exists("option", $value)){
-                dibi::update('postage', array('option' => $value['option']))
-                ->where('postage_id = %i', $value['id'])->execute();
+            if (array_key_exists("option", $value)){                
+                $this->updater("postage",array("option" => $value["option"]),
+                        "postage_id", $value["id"]);
             }
             
             if (array_key_exists("price", $value)){
-                dibi::update('postage', array('price' => $value['price']))
-                ->where('postage_id = %i', $value['id'])->execute();
+                $this->updater("postage",array("price" => $value["price"]),
+                        "postage_id", $value['id']);
             }   
         }
     }
     
     public function getPostageOptions($id){
-        return dibi::select('*')->from('postage')->where('listing_id = %i', $id)->fetchAll();
+        return $this->valSelect("*", "postage", "listing_id", $id, TRUE);
     }
     
     public function verifyPostage($ids, $option, $price){
@@ -90,11 +92,12 @@ class Listings extends \DibiRow {
     }
         
     public function getListings($author){
-        return dibi::select('id, product_name, status')->from('listings')->where('author = %s', $author)->fetchAll();
+        return $this->valSelect(array("id", "product_name", "status"), 
+                "listings", "author", $author, TRUE);
     }
     
     public function editListing($id, $values){
-        return dibi::update('listings', $values)->where('id = %i', $id)->execute();
+        return $this->updater("listings", $values, "id", $id);
     }
     
     public function deleteListing($id){
@@ -102,73 +105,61 @@ class Listings extends \DibiRow {
     }
     
     public function getActualListingValues($id){
-        return dibi::select('id, product_name, product_type, product_desc, price, ships_from, ships_to')
-                ->from('listings')->where('id = %i', $id)->fetch();
+        
+        return $this->valSelect(array("id", "product_name", "product_type", 
+            "product_desc", "price", "ships_from", "ships_to", "author"
+            ,"MS", "FE"), "listings", "id", $id);
     }
     
-    public function getAuthor($id){
-        $q = dibi::select('author')->from('listings')->where('id = %i', $id)->fetch();
-        return $q['author'];
+    public function getAuthor($id){       
+        return $this->valSelect("author", "listings", "id", $id);
+    }
+    
+    public function isListingAuthor($id, $login){
+        $listingAuthor = $this->getAuthor($id);
+        return $this->checker($listingAuthor, $login);
     }
     
     public function getListingImages($id){
-        return unserialize(dibi::select('product_images')->from('listings')->where('id = %i', $id)
-                ->fetch()['product_images']);
+        return unserialize($this->valSelect("product_images", "listings", "id", $id));  
     }
     
-    public function updateListingImages($id, $images){
-        dibi::update('listings', array('product_images' => $images))->where('id = %i', $id)->execute();
+    public function updateListingImages($id, $images){        
+        $this->updater("listings", array("product_images" => $images), "id", $id);
     }
     
     public function setListingMainImage($id, $imgNum){
-        dibi::update('listings', array('main_image' => $imgNum))->where('id = %i', $id)->execute();
+        $this->updater("listings", array('main_image' => $imgNum), "id", $id);
     }
     
     public function getListingMainImage($id){
-        return dibi::select('main_image')->from('listings')->where('id = %i', $id)->fetch();
+        return $this->valSelect("main_image", "listings", "id", $id);   
     }
 
     public function getListingPrice($id){
-        return dibi::select('price')->from('listings')->where('id = %i', $id)->fetch();
+        return $this->valSelect("price", "listings", "id", $id);  
     }
     
-    public function enableListing($id){
-        return dibi::update('listings', array('status' => 'active'))->where('id = %i', $id)->execute();
+    public function enableListing($id){        
+        return $this->updater("listings", array('status' => 'active'), "id", $id);
     }
     
-    public function disableListing($id){
-        return dibi::update('listings', array('status' => 'disabled'))->where('id = %i', $id)->execute();
+    public function disableListing($id){       
+        return $this->updater("listings", array("status" => "disabled"), "id", $id);
     }
     
     public function isListingActive($id){
-        $q = dibi::select('status')->from('listings')->where('id = %i', $id)->fetch();
-        
-        if ($q['status'] == "active"){
-            return TRUE;
-        }
-        
-        return FALSE;
+        $q = $this->valSelect("status", "listings", "id", $id);     
+        return $this->checker($q, "active");
     }
     
     public function isListingFE($id){
-        $q = dibi::select('FE')->from('listings')
-                ->where('id = %i', $id)->fetch()['FE'];
-        
-        if ($q == "yes"){
-            return TRUE;
-        }
-        
-        return FALSE;
+        $q = $this->valSelect("FE", "listings", "id", $id);
+        return $this->checker($q, "yes");
     }
     
     public function isListingMultisig($id){
-        $q = dibi::select('MS')->from('listings')
-                ->where('id = %i', $id)->fetch()['MS'];
-        
-        if ($q == "yes"){
-            return TRUE;
-        }
-        
-        return FALSE;
+        $q = $this->valSelect("MS", "listings", "id", $id);
+        return $this->checker($q, "yes");
     }
 }

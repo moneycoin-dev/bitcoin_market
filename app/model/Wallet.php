@@ -2,9 +2,15 @@
 
 namespace App\Model;
 
-use dibi;
+/**
+ * 
+ * @what Wallet data model class and command wrappper
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
 
-class Wallet extends \DibiRow
+class Wallet extends BaseModel
 {
     protected $btcClient;
     
@@ -37,53 +43,43 @@ class Wallet extends \DibiRow
         $response = $this->btcClient->sendCommand($command);
         $result = json_decode($response->getBody()->getContents(), true); 
         
-        return $result;
+        return $result['result'];
     }
 	
     public function getBtcAddress($login){
-        $q = dibi::select("*")->from("users")->where("login = %s", $login)
-            ->fetch();
-
-        return $q["btcaddress"];       
+        return $this->valSelect("btcaddress", "users", "login", $login);    
     }
     
-    public function writeNewBtcAddress($newaddress ,$login, $timestamp){
-        dibi::update("users", array("btcaddress" => $newaddress, "address_request_time" => $timestamp))
-                ->where("login = %s", $login)->execute();
+    public function writeNewBtcAddress($newaddress ,$login, $timestamp){        
+        $this->updater("users", array("btcaddress" => $newaddress, 
+            "address_request_time" => $timestamp), "login", $login);
     }
     
-    public function addressLastRequest($login){
-        return dibi::select("address_request_time")->from("users")
-                ->where("login = %s", $login)->fetch()["address_request_time"];
+    public function addressLastRequest($login){      
+        return $this->valSelect("address_request_time", "users", "login", $login);
     }
     
-    public function getBalance($account){
-                
+    public function getBalance($account){      
         return $this->command("getbalance", $account);
     }
     
-    public function generateAddress($account){
-        
+    public function generateAddress($account){   
         return $this->command("getnewaddress", $account);
     }
     
     public function validateAddress($address){
-        
         return $this->command("validateaddress", $address);
     }
     
     public function getTransaction($txID){
-        
         return $this->command("gettransaction", $txID);
     }
     
     public function moveFunds($fromAccount, $toAccount, $ammount, $comment = NULL){
-        
         return $this->command("move", func_get_args());
     }
     
     public function sendFunds($fromAccount, $btcAddress){
-        
         return $this->command("sendfrom", func_get_args());
     }
 }

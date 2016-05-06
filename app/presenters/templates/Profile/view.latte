@@ -1,6 +1,6 @@
 {if $userData}
 <h3> Profil uživatele {$userData->login} </h3>
-<b> Vendor: <b> {if $userData->vendor == "0"} Ne {else} Ano{/if}
+<b> Vendor: <b> {if $userData->access_level == "vendor"} Ne {else} Ano{/if}
 <h4> Kontakt: </h4>
 <b> Jabber: </b> {if $userData->jabber} {$userData->jabber} {else} Nevyplňen. {/if}
 <br>

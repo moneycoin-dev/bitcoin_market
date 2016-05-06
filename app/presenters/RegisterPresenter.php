@@ -5,17 +5,25 @@ namespace App\Presenters;
 use Nette;
 use App\Model\Registration;
 use Nette\Security as NS;
-use Nbobtc\Command\Command;
+
+/**
+ * 
+ * @what Market registrations
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
 
 class RegisterPresenter extends GuestPresenter
 {
+    protected $regModel, $wallet;
 
-    /** @var Models\Registration */
-    protected $regModel;
-
-    public function injectBaseModels(Registration $reg)
-    {
+    public function injectRegistration(Registration $reg){
         $this->regModel = $reg;
+    }
+    
+    public function injectWallet(Wallet $w){
+        $this->wallet = $w;
     }
 
     protected function createComponentRegisterForm()
@@ -102,14 +110,12 @@ class RegisterPresenter extends GuestPresenter
         //create db record
         $this->regModel->createUser($values);
 
-        //get btcClient, issue getnewadress command, process response
-        $btcClient = $this->btcClient;
-        $command = new Command('getnewaddress', $values['login']);  
-        $response = $btcClient->sendCommand($command);
-        $result = json_decode($response->getBody()->getContents(), true);
+        //query btcd and generate new address
+        $login = $values["login"];
+        $address = $this->wallet->generateAddress($login);
 
         //store user's btc adress to db
-        $this->regModel->assignBtcAdress($values['login'], $result['result']); 
+        $this->regModel->assignBtcAdress($login, $address); 
 
         //redirect user
         $this->flashMessage('Registration succeeded!');

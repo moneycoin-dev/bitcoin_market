@@ -2,6 +2,14 @@
 
 namespace App\Presenters;
 
+/**
+ * 
+ * @what User's BTC receiving adress implementation
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class WalletPresenter extends ProtectedPresenter {
 
     private function redirector(){

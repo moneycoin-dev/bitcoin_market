@@ -3,12 +3,17 @@
 namespace App\Model;
 
 use Nette;
-use Nette\Security\Passwords;
 use dibi;
+use Nette\Security\Passwords;
 
 /**
- * Users management.
+ * 
+ * @what UserManager data model class
+ * @author Base by Nette Framework Authors, extended by клустерфцк
+ * @copyright 2015-2016
+ * 
  */
+
 class UserManager extends Nette\Object implements Nette\Security\IAuthenticator
 {
     const   TABLE_NAME = "users",

@@ -6,6 +6,14 @@ use App\Model\Orders;
 use Nette\Utils\Paginator;
 use Nette\Application\UI\Form;
 
+/**
+ * 
+ * @what Vendor sales Implementation
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class SalesPresenter extends ProtectedPresenter {
     
     private function getOrderId(){

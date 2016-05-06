@@ -20,7 +20,13 @@ session:
 
 
 services:
-	- App\Forms\ListingFormFactory
-	- App\Forms\VendorNotesFactory
-	router: App\RouterFactory::createRouter
-       
+        - App\Forms\ListingFormFactory
+        - App\Forms\VendorNotesFactory
+        router: App\RouterFactory::createRouter
+        baseHelper:
+            class: App\Helpers\BaseHelper
+            arguments: [@application]
+            autowired: false
+        listingsHelper:
+            class: App\Helpers\ListingsHelper(@baseHelper)
+            inject: yes

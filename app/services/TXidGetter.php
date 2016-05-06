@@ -6,6 +6,14 @@ use App\Auth\BitcoindAuth as BTCAuth;
 use App\Model\Wallet;
 use Nette\Http\Request;
 
+/**
+ * 
+ * @what Transaction id retriever from bitcoind
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class TXidGetter {
     
     public function __construct(Request $r){

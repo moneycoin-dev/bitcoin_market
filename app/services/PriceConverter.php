@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * 
+ * @what Currency data getter and converter
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class PriceConverter {
     
     private $connection;

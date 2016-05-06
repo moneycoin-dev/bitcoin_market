@@ -7,9 +7,17 @@ use App\Model\UserManager;
 use Nette\Security as NS;
 use captcha\Captcha\CaptchaControl;
 
+/**
+ * 
+ * @what Market login Implementation
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class LoginPresenter extends GuestPresenter
 {        
-    /** @var Models\UserManager */
+
     protected $userManager;
     
     public function injectBaseModels(UserManager $man)

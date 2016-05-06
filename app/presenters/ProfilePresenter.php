@@ -5,6 +5,14 @@ namespace App\Presenters;
 use Nette;
 use App\Model\Settings;
 
+/**
+ * 
+ * @what User's public profile
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class ProfilePresenter extends ProtectedPresenter {
     
     protected $settings;

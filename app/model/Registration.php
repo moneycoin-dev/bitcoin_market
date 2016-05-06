@@ -4,7 +4,15 @@ namespace App\Model;
 
 use dibi;
 
-class Registration extends \DibiRow
+/**
+ * 
+ * @what Registration data model class
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
+class Registration extends BaseModel
 {
 
     public function createUser($values)
@@ -12,16 +20,14 @@ class Registration extends \DibiRow
         dibi::query('INSERT INTO [users]',$values);
     }
 
-    public function assignBtcAdress($login, $address){
-
-        dibi::update('users', array('btcaddress' => $address))
-                ->where('login = %s', $login)->execute();
+    public function assignBtcAdress($login, $address){        
+        $this->updater("users",  array('btcaddress' => $address), "login", $login);
     }
 
     public function checkIfUserExists($login){
-        $rslt = dibi::select('login')->from('users')->where('login = %s', $login)->fetch();
+        $rslt = $this->valSelect("login", "users", "login", $login);
 
-        if ($rslt['login']){
+        if ($rslt){
             throw new DuplicateNameException('Zadané jméno již v systému existuje!');
         }
     }    

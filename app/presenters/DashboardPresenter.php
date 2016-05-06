@@ -5,6 +5,14 @@ namespace App\Presenters;
 use Nette;
 use App\Model\Listings;
 
+/**
+ * 
+ * @what Market user interface
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class DashboardPresenter extends ProtectedPresenter
 {   
     protected $listings;
@@ -37,8 +45,8 @@ class DashboardPresenter extends ProtectedPresenter
 
     public function handlelogout()
     {
-            $this->getUser()->logout(TRUE);
-            $this->flashMessage('You have been signed out.');
-            $this->redirect('Login:in');
+        $this->getUser()->logout(TRUE);
+        $this->flashMessage('You have been signed out.');
+        $this->redirect('Login:in');
     }
 }

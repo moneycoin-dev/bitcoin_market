@@ -5,6 +5,14 @@ namespace App\Presenters;
 use Nette;
 use App\Models\Messages;
 
+/**
+ * 
+ * @what Private messages Implementation
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class MessagesPresenter extends ProtectedPresenter
 {
     /** @var Models\Messages */

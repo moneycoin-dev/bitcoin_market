@@ -4,6 +4,14 @@ namespace App\Auth;
 
 use Nette\Security\Permission;
 
+/**
+ * 
+ * @what Access Control class
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
 class AuthorizatorFactory
 {
     /**

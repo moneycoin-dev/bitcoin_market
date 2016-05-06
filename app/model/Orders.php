@@ -4,7 +4,15 @@ namespace App\Model;
 
 use dibi;
 
-class Orders extends \DibiRow {
+/**
+ * 
+ * @what Orders data model class
+ * @author Tomáš Keske a.k.a клустерфцк
+ * @copyright 2015-2016
+ * 
+ */
+
+class Orders extends BaseModel {
 
     public function getOrders($login, $status ,$paginator = NULL, $sales = NULL){
         
@@ -26,55 +34,39 @@ class Orders extends \DibiRow {
        }       
     }
     
-    public function isOwner($id, $login){
-        $q = dibi::select('author')->from('orders')->where('order_id = %i', $id)
-                ->fetch();
-        
-        if ($q['author'] == $login){
-            return TRUE;
-        } else {
-            return FALSE;
-        }
+    public function isOwner($id, $login){  
+        $q = $this->valSelect("author", "orders", "order_id", $id);
+        return $this->checker($q, $login);
     }
     
-    public function getOrderParticipants($orderId){
-        return dibi::select('author, buyer')->from('orders')
-                ->where('order_id = %i', $orderId)->fetch();
+    public function getOrderParticipants($orderId){        
+        return $this->valSelect(array("author", "buyer"), "orders", 
+                "order_id", $orderId);
     }
     
     public function writeOrderToDb(array $arguments){
         dibi::insert('orders', $arguments)->execute();
     }
     
-    public function changeOrderStatus($id, $status){
-        dibi::update('orders', array('status' => $status))
-                ->where('order_id = %i', $id)->execute();
+    public function changeOrderStatus($id, $status){     
+        $this->updater("orders", array('status' => $status), "order_id", $id);
     }
     
     public function getOrderStatus($id){
-        return dibi::select('status')->from('orders')
-                ->where('order_id = %i', $id)->fetch()['status'];
+        return $this->valSelect("status", "orders", "order_id", $id);
     }
     
-    public function isOrderFinalized($id){
-        $q =  dibi::select('finalized')->from('orders')
-                ->where('order_id = %i', $id)->fetch()['finalized'];
-        
-        if ($q == "yes"){
-            return TRUE;
-        } else {
-            return FALSE;
-        }
+    public function isOrderFinalized($id){        
+        $q = $this->valSelect("finalized", "orders", "order_id", $id);
+        return $this->checker($q, "yes");
     }
     
     public function orderFinalize($id){
-        dibi::update('orders', array('finalized' => 'yes'))
-                ->where('order_id = %i', $id)->execute();
+        $this->updater("orders", array('finalized' => 'yes'), "order_id", $id);
     }
     
     public function getOrderDetails($id){
-        return dibi::select('*')->from('orders')
-                ->where('order_id = %i', $id)->fetch();
+        return $this->valSelect("*", "orders", "order_id", $id, TRUE)[0];
     }
     
     public function writeSellerNotes($id, $notes){
@@ -83,11 +75,8 @@ class Orders extends \DibiRow {
     }
     
     public function getNotesLeft($id, $seller = NULL){
-
-        $string = isset($seller) ? 'seller_notes' : 'buyer_notes';
-        
-        return dibi::select($string)->from('orders')
-              ->where('order_id = %i', $id)->fetch()[$string];    
+        $string = isset($seller) ? 'seller_notes' : 'buyer_notes';       
+        return $this->valSelect($string, "orders", "order_id", $id);
     }
     
     public function writeDisputeContents($order,$message,$timestamp, $autor){
