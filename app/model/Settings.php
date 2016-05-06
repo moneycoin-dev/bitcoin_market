@@ -16,7 +16,7 @@ use Nette\Security\Passwords;
 class Settings extends BaseModel
 {             
     public function selectById($id, $what){       
-        return $this->valSelect($what, "users", "id", $id);
+        return $this->slect($what, "users", "id", $id);
     }
 
     public function selectByLogin($login){
@@ -40,7 +40,7 @@ class Settings extends BaseModel
 
         if ($this->verifyOldPassword($oldpw, $id)) {
             $hash = Passwords::hash($newpw);
-            $this->updater("users", array('password' => $hash), "id", $id);
+            $this->upd("users", array('password' => $hash), "id", $id);
         }
     }
 
@@ -52,21 +52,21 @@ class Settings extends BaseModel
             throw new BadPinException('Zadali jste špatně starý pin');
 
         } else {
-            $this->updater("users", array('pin' => $pinnew), "id", $id);
+            $this->upd("users", array('pin' => $pinnew), "id", $id);
         }
     }
 
     public function isPgpNull($id){
         $q = $this->selectById($id, "pubkey");
-        return $this->checker($q, NULL);
+        return $this->check($q, NULL);
     }
 
     public function newPgpKey($pubkey, $id){                      
-        $this->updater("users", array("pubkey" => $pubkey), "id", $id);
+        $this->upd("users", array("pubkey" => $pubkey), "id", $id);
     }
 
     public function jabberID($jabber, $id){
-        $this->updater("users", array("jabber" => $jabber), "id", $id);
+        $this->upd("users", array("jabber" => $jabber), "id", $id);
     }
 }
 

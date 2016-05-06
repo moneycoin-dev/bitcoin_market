@@ -14,7 +14,7 @@ use dibi;
 
 class BaseModel extends \DibiRow {
     
-    public function valSelect($what, $from, $where, $by, $all = NULL){
+    public function slect($what, $from, $where, $by, $all = NULL){
         
         //db select shortcut function
         
@@ -37,22 +37,22 @@ class BaseModel extends \DibiRow {
         }
         
         if(!isset($all) && !is_array($what)){
-            return dibi::select($whatStr)->from($from)->where($where .' = %s', $by)
+            return dibi::select($whatStr)->from($from)->where(array($where => $by))
                     ->fetch()[$what];
         } 
         
         else if (isset($all) || isset($all) && is_array($what)) {    
-            return dibi::select($whatStr)->from($from)->where($where .' = %s', $by)
+            return dibi::select($whatStr)->from($from)->where(array($where => $by))
                     ->fetchAll();
         }   
         
         else if (is_array($what)){
-             return dibi::select($whatStr)->from($from)->where($where .' = %s', $by)
+             return dibi::select($whatStr)->from($from)->where(array($where => $by))
                     ->fetch();
         }
     }
 
-    public function checker($q, $wanted){
+    public function check($q, $wanted){
         
         //db result value checker    
         if ($q == $wanted){
@@ -62,10 +62,19 @@ class BaseModel extends \DibiRow {
         return FALSE;
     }
     
-    public function updater($what, $news, $where, $by){
+    public function upd($what, $news, $where, $by){
         
         //update query shortcut
         dibi::update($what, $news)
             ->where(array($where => $by))->execute();
+    }
+    
+    public function nsrt($where, array $what, $insId = NULL){
+        
+        dibi::insert($where, $what)->execute();
+        
+        if (isset($insId)){
+            return dibi::getInsertId();
+        }
     }
 }

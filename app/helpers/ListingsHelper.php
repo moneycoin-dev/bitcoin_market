@@ -31,7 +31,7 @@ class ListingsHelper extends BaseHelper {
         
             if ($image->isOk() && $image->isImage()){
                 $filesPath = getcwd() . "/userfiles/" ;
-                $username = $this->returnLogin();
+                $username = $this->logn();
                 $userPath = $filesPath . $username;
 
                 //get extension for randomized filename
@@ -126,7 +126,7 @@ class ListingsHelper extends BaseHelper {
     public function constructCheckboxList($form){
         $listingOptions = array("ms" => "Multisig");
 
-        if($this->userManager->hasFEallowed($this->returnLogin())){
+        if($this->userManager->hasFEallowed($this->logn())){
             $listingOptions["fe"] = "Finalize Early";
         }
         
@@ -147,7 +147,7 @@ class ListingsHelper extends BaseHelper {
     public function getProcValues($values, $type = NULL){
         ///performs value processing to later save in db///  
         //add listing author to values
-        $values['author'] = $this->returnLogin();
+        $values['author'] = $this->logn();
 
         //add type of listing to values according to checkboxes set
         if (in_array("ms", $values["listingOptions"])){

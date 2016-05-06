@@ -6,7 +6,6 @@ use Nette;
 use App\Model\Listings;
 use App\Model\Orders;
 use App\Helpers\ListingsHelper;
-use App\Helpers\BaseHelper;
 use App\Forms\ListingFormFactory;
 use App\Forms\VendorNotesFactory;
 
@@ -20,8 +19,8 @@ use App\Forms\VendorNotesFactory;
 
 class ListingsPresenter extends ProtectedPresenter {
     
-    protected $listings, $orders,$formFactory, 
-            $vendorNotes, $URL, $request, $lHelp, $bHelp;
+    protected $listings, $orders,$formFactory,
+              $vendorNotes, $URL, $request, $lHelp;
     
     const MAX_POSTAGE_OPTIONS = 5;
   
@@ -34,10 +33,6 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function injectHelper(ListingsHelper $lh){
         $this->lHelp = $lh;
-    }
-    
-    public function injectBh(BaseHelper $bh){
-        $this->bHelp = $bh;
     }
     
     public function injectListings(Listings $list){
@@ -99,7 +94,7 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->redirect("Listings:create");         
         };
         
-        $session = $this->bHelp->sess("postage");
+        $session = $this->hlp->sess("postage");
         $counter = $session->counter;
         $values = $session->values;
         
@@ -131,7 +126,7 @@ class ListingsPresenter extends ProtectedPresenter {
             
             //things to do when form is submitted by create button
             //unset postage textbox counter on success
-            unset($this->bHelp->sess("postage")->counter);
+            unset($this->hlp->sess("postage")->counter);
             
             $values = $form->getValues(True);
             $postage = $this->lHelp->returnPostageArray($values);
@@ -161,7 +156,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleVendor(){
         
-        $login =  $this->bHelp->returnLogin();
+        $login =  $this->hlp->logn();
   
         if ($this->wallet->getBalance($login) > 1){
          
@@ -187,8 +182,8 @@ class ListingsPresenter extends ProtectedPresenter {
         //this code prevents showing multiple postage
         //textboxes on page reload
         if (is_null($this->request->getReferer())){
-            unset($this->bHelp->sess("postage")->counter);
-            unset($this->bHelp->sess("postage")->values);
+            unset($this->hlp->sess("postage")->counter);
+            unset($this->hlp->sess("postage")->values);
             $this->redirect("Listings:in");
         }     
     }
@@ -196,9 +191,9 @@ class ListingsPresenter extends ProtectedPresenter {
     public function actionIn(){
         //when user goes to Listings:in for example by backward button
         //unset all the counters, to show only correct values
-        unset($this->bHelp->sess("postage")->counter);
-        unset($this->bHelp->sess("postage")->counterEdit);
-        unset($this->bHelp->sess("postage")->values);
+        unset($this->hlp->sess("postage")->counter);
+        unset($this->hlp->sess("postage")->counterEdit);
+        unset($this->hlp->sess("postage")->values);
     }
 
     public function handleDeleteListing($id){
@@ -211,7 +206,7 @@ class ListingsPresenter extends ProtectedPresenter {
         //if $name is null means that function has been called from createListing   
         if (!is_null($name)){
                 
-            $counter = &$this->bHelp->sess("postage")->counterEdit;
+            $counter = &$this->hlp->sess("postage")->counterEdit;
 
             //decrease the counter for temporary field deletion only
             //if 0 unset totally to delete all fields from view
@@ -244,7 +239,7 @@ class ListingsPresenter extends ProtectedPresenter {
         } else {
             
             //decreasing fields for create listing
-            $counter = &$this->bHelp->sess("postage")->counter;
+            $counter = &$this->hlp->sess("postage")->counter;
             
             if ($counter == 0){
                 unset($counter);
@@ -256,7 +251,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleDisableListing($id){
         
-        $login = $this->bHelp->returnLogin();
+        $login = $this->hlp->logn();
         
         if ($this->listings->isListingAuthor($id, $login)){
             $this->listings->disableListing($id);
@@ -268,7 +263,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleEnableListing($id){
         
-        $login = $this->bHelp->returnLogin();
+        $login = $this->hlp->logn();
         
         if ($this->listings->isListingAuthor($id, $login)){
             $this->listings->enableListing($id);
@@ -280,7 +275,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function createComponentEditForm(){
         $frm = $this->formFactory->create();
-        $listingID = $this->bHelp->sess("listing")->listingID;
+        $listingID = $this->hlp->sess("listing")->listingID;
         
         //query database for listing type
         $FE = $this->listings->isListingFE($listingID);
@@ -303,7 +298,7 @@ class ListingsPresenter extends ProtectedPresenter {
         unset($checkVal);
 
         $cnt = count ($this->postageOptions);  
-        $session = $this->bHelp->sess("postage");
+        $session = $this->hlp->sess("postage");
 
         
         for ($i = 0; $i<$cnt; $i++){
@@ -332,7 +327,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function() use($listingID) {
             
             //inline onlclick handler, that counts postage options
-            $session = $this->bHelp->sess("postage");
+            $session = $this->hlp->sess("postage");
             $counter = &$session->counterEdit;
             
             if ($counter <= self::MAX_POSTAGE_OPTIONS){
@@ -360,7 +355,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function actionEditListing($id){
         
-        $login = $this->bHelp->returnLogin();
+        $login = $this->hlp->logn();
                             
         if ($this->listings->isListingAuthor($id, $login)){
            $this->actualListingValues = $this->listings->getActualListingValues($id);
@@ -370,24 +365,24 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         $listingImages = $this->listings->getListingImages($id);
-        $imgSession = $this->bHelp->sess("images");
+        $imgSession = $this->hlp->sess("images");
         $imgSession->listingImages = $listingImages;
-        $listingSession = $this->bHelp->sess("listing");
+        $listingSession = $this->hlp->sess("listing");
         $listingSession->listingID = $id;
     }
 
     public function handleDeleteClick($img){
 
-        $images = $this->bHelp->sess("images");
+        $images = $this->hlp->sess("images");
         $images->toDelete = $img;
         $this->redirect("Listings:alert");       
     }
     
     public function handleDeleteImage(){
 
-       $session = $this->bHelp->sess("images");
+       $session = $this->hlp->sess("images");
        $img =  $session->toDelete;
-       $listingID = $this->bHelp->sess("listing")->listingID;
+       $listingID = $this->hlp->sess("listing")->listingID;
        $imgs = $this->listings->getListingImages($listingID);
        
        unset($imgs[$img]);
@@ -409,7 +404,7 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function handleDeleteAbort(){
-        $listingID = $this->bHelp->sess("listing")->listingID;
+        $listingID = $this->hlp->sess("listing")->listingID;
         $this->redirect("Listings:editListing", $listingID);
     }
     
@@ -436,7 +431,7 @@ class ListingsPresenter extends ProtectedPresenter {
             //redirect potentional viewer to his dashboard
             if ($this->listings->isListingActive($id)){
                 $this->lHelp->setListingSession($id);
-                $session = $this->bHelp->sess("images");
+                $session = $this->hlp->sess("images");
                 $session->listingImages = $this->listings->getListingImages($id);
             } else {
                 $this->redirect("Dashboard:in");
@@ -471,7 +466,7 @@ class ListingsPresenter extends ProtectedPresenter {
                 
                 //prevent buying from myself scenario
                 
-                $login = $this->bHelp->returnLogin();
+                $login = $this->hlp->logn();
                 $listingAuthor = $this->listings->getAuthor($id);
                 
                 if ($login != $listingAuthor){
@@ -497,7 +492,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function vendorNotesSuccess($form){
         
-        $session = $this->bHelp->sess("listing");
+        $session = $this->hlp->sess("listing");
 
         //assemble argumets array
         $listingID = $session->listingDetails->id;
@@ -507,12 +502,17 @@ class ListingsPresenter extends ProtectedPresenter {
         $postage = $session->postageDetails['postage'];
         $buyerNotes = $form->getValues(TRUE)['notes'];
         $date = date("j. n. Y"); 
-        $buyer = $this->bHelp->returnLogin();   
+        $buyer = $this->hlp->logn();
+        $price = $session->finalPrice;
+        $escrowAddress = $this->configuration->valueGetter("escrow_address");
+        
+        $this->wallet->storeTransaction();
+      
           
         $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
-            "buyer" => $buyer, "status" => "pending", "final_price" => $session->finalPrice);
+            "buyer" => $buyer, "status" => "pending", "final_price" => $price);
 
         //and write new order to database
         $this->orders->writeOrderToDb($arguments);
@@ -527,7 +527,7 @@ class ListingsPresenter extends ProtectedPresenter {
         
         if ($form['zrusit']->submittedBy) {
 
-          $listingID = $this->bHelp->sess("listing")->listingDetails->id;   
+          $listingID = $this->hlp->sess("listing")->listingDetails->id;   
           $this->redirect('Listings:view', $listingID);
         }
 
@@ -537,7 +537,7 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function handleSetMainImage($imgNum){
         
-        $listingID = $this->bHelp->sess("listing")->listingID;     
+        $listingID = $this->hlp->sess("listing")->listingID;     
         $this->listings->setListingMainImage($listingID, $imgNum);
     }
     
@@ -545,7 +545,7 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $form = new Nette\Application\UI\Form;
         
-        $session = $this->bHelp->sess("listing");
+        $session = $this->hlp->sess("listing");
         $listingID = $session->listingDetails->id;
         
         $postageOptionsDB = $this->listings->getPostageOptions($listingID);
@@ -579,7 +579,7 @@ class ListingsPresenter extends ProtectedPresenter {
     }
     
     public function buyFormOnSuccess($form){
-        $session = $this->bHelp->sess("listing");
+        $session = $this->hlp->sess("listing");
         $listingID = $session->listingDetails->id;
         $session->postageDetails = $form->getValues(TRUE);
         
@@ -593,10 +593,10 @@ class ListingsPresenter extends ProtectedPresenter {
         $extractedOption = substr($postageString, 0, strpos($postageString, "+"));
         $extractedPostagePrice = intval(substr($postageString, strpos($postageString, "+")+1, -3));
         
-        $session = $this->bHelp->sess("listing");
+        $session = $this->hlp->sess("listing");
         
         $ids = $session->postageIDs;
-        unset($this->bHelp->sess("listing")->postageIDs);
+        unset($this->hlp->sess("listing")->postageIDs);
         
         //check that selectbox has not been altered
         if (!$this->listings->verifyPostage($ids, $extractedOption, $extractedPostagePrice)){
@@ -606,12 +606,12 @@ class ListingsPresenter extends ProtectedPresenter {
         $listingDetails = $session->listingDetails;
         
         //price conversions and user balance check
-        $converter = new \PriceConverter();
+        $converter  = $this->converter;
         $postageBTC = $converter->convertCzkToBTC($extractedPostagePrice);
         $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
         $finalPrice = $listingBTC + $postageBTC;
         $session->finalPrice = $finalPrice;
-        $userBalance = $this->wallet->getBalance($this->bHelp->returnLogin());
+        $userBalance = $this->wallet->getBalance($this->hlp->logn());
         
         if (!($userBalance >= $finalPrice)){
             $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
@@ -624,7 +624,7 @@ class ListingsPresenter extends ProtectedPresenter {
         
         if (!$form['add_postage']->submittedBy){
             
-            unset($this->bHelp->sess("postage")->counterEdit);
+            unset($this->hlp->sess("postage")->counterEdit);
 
             $values = $form->getValues(TRUE);
             $procValues = $this->lHelp->getProcValues($values, "edit");
@@ -748,16 +748,16 @@ class ListingsPresenter extends ProtectedPresenter {
         $urlPath = $this->URL->path;
      
         if ( strpos($urlPath, "edit" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
-            $this->template->listingImages = $this->bHelp->sess("images")->listingImages;
-            $this->template->listingID = $this->bHelp->sess("listing")->listingID;
-            $this->template->listingDetails = $this->bHelp->sess("listing")->listingDetails;
+            $this->template->listingImages = $this->hlp->sess("images")->listingImages;
+            $this->template->listingID = $this->hlp->sess("listing")->listingID;
+            $this->template->listingDetails = $this->hlp->sess("listing")->listingDetails;
         }
     }
     
     public function renderIn(){
         
         //render variables for single template - Listings:in    
-        $login = $this->bHelp->returnLogin();
+        $login = $this->hlp->logn();
         $this->template->isVendor = $this->listings->isVendor($login);
         $this->template->listings = $this->listings->getListings($login);    
         $this->template->currentUser = $login;

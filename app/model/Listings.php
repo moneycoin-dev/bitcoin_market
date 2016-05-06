@@ -15,21 +15,17 @@ use dibi;
 class Listings extends BaseModel {
         
     public function isVendor($login){
-       $q = $this->valSelect("access_level", "users", "login", $login);
-       return $this->checker($q, "vendor");
+       $q = $this->slect("access_level", "users", "login", $login);
+       return $this->check($q, "vendor");
     }
 
     public function becomeVendor($login){        
-        $this->updater("users", array('access_level' => 'vendor'), "login", $login);
+        $this->upd("users", array('access_level' => 'vendor'), "login", $login);
     }
         
     public function createListing(array $values){
-        
         $values["status"] = "disabled";
-        
-        dibi::insert('listings', $values)->execute();
-        
-        return dibi::getInsertId();
+        return $this->nsrt("listings", $values, TRUE);
     }
     
     public function writeListingPostageOptions($listingID, array $postage){
@@ -59,19 +55,19 @@ class Listings extends BaseModel {
         foreach ($values as $value){
             
             if (array_key_exists("option", $value)){                
-                $this->updater("postage",array("option" => $value["option"]),
+                $this->upd("postage",array("option" => $value["option"]),
                         "postage_id", $value["id"]);
             }
             
             if (array_key_exists("price", $value)){
-                $this->updater("postage",array("price" => $value["price"]),
+                $this->upd("postage",array("price" => $value["price"]),
                         "postage_id", $value['id']);
             }   
         }
     }
     
     public function getPostageOptions($id){
-        return $this->valSelect("*", "postage", "listing_id", $id, TRUE);
+        return $this->slect("*", "postage", "listing_id", $id, TRUE);
     }
     
     public function verifyPostage($ids, $option, $price){
@@ -92,12 +88,12 @@ class Listings extends BaseModel {
     }
         
     public function getListings($author){
-        return $this->valSelect(array("id", "product_name", "status"), 
+        return $this->slect(array("id", "product_name", "status"), 
                 "listings", "author", $author, TRUE);
     }
     
     public function editListing($id, $values){
-        return $this->updater("listings", $values, "id", $id);
+        return $this->upd("listings", $values, "id", $id);
     }
     
     public function deleteListing($id){
@@ -106,60 +102,60 @@ class Listings extends BaseModel {
     
     public function getActualListingValues($id){
         
-        return $this->valSelect(array("id", "product_name", "product_type", 
+        return $this->slect(array("id", "product_name", "product_type", 
             "product_desc", "price", "ships_from", "ships_to", "author"
             ,"MS", "FE"), "listings", "id", $id);
     }
     
     public function getAuthor($id){       
-        return $this->valSelect("author", "listings", "id", $id);
+        return $this->slect("author", "listings", "id", $id);
     }
     
     public function isListingAuthor($id, $login){
         $listingAuthor = $this->getAuthor($id);
-        return $this->checker($listingAuthor, $login);
+        return $this->check($listingAuthor, $login);
     }
     
     public function getListingImages($id){
-        return unserialize($this->valSelect("product_images", "listings", "id", $id));  
+        return unserialize($this->slect("product_images", "listings", "id", $id));  
     }
     
     public function updateListingImages($id, $images){        
-        $this->updater("listings", array("product_images" => $images), "id", $id);
+        $this->upd("listings", array("product_images" => $images), "id", $id);
     }
     
     public function setListingMainImage($id, $imgNum){
-        $this->updater("listings", array('main_image' => $imgNum), "id", $id);
+        $this->upd("listings", array('main_image' => $imgNum), "id", $id);
     }
     
     public function getListingMainImage($id){
-        return $this->valSelect("main_image", "listings", "id", $id);   
+        return $this->slect("main_image", "listings", "id", $id);   
     }
 
     public function getListingPrice($id){
-        return $this->valSelect("price", "listings", "id", $id);  
+        return $this->slect("price", "listings", "id", $id);  
     }
     
     public function enableListing($id){        
-        return $this->updater("listings", array('status' => 'active'), "id", $id);
+        return $this->upd("listings", array('status' => 'active'), "id", $id);
     }
     
     public function disableListing($id){       
-        return $this->updater("listings", array("status" => "disabled"), "id", $id);
+        return $this->upd("listings", array("status" => "disabled"), "id", $id);
     }
     
     public function isListingActive($id){
-        $q = $this->valSelect("status", "listings", "id", $id);     
-        return $this->checker($q, "active");
+        $q = $this->slect("status", "listings", "id", $id);     
+        return $this->check($q, "active");
     }
     
     public function isListingFE($id){
-        $q = $this->valSelect("FE", "listings", "id", $id);
-        return $this->checker($q, "yes");
+        $q = $this->slect("FE", "listings", "id", $id);
+        return $this->check($q, "yes");
     }
     
     public function isListingMultisig($id){
-        $q = $this->valSelect("MS", "listings", "id", $id);
-        return $this->checker($q, "yes");
+        $q = $this->slect("MS", "listings", "id", $id);
+        return $this->check($q, "yes");
     }
 }

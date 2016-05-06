@@ -16,14 +16,10 @@ use Nette\Security as NS;
 
 class RegisterPresenter extends GuestPresenter
 {
-    protected $regModel, $wallet;
-
+    protected $regModel;
+ 
     public function injectRegistration(Registration $reg){
         $this->regModel = $reg;
-    }
-    
-    public function injectWallet(Wallet $w){
-        $this->wallet = $w;
     }
 
     protected function createComponentRegisterForm()

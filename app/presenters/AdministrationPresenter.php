@@ -2,7 +2,7 @@
 
 namespace App\Presenters;
 
-use App\Model\Configuration;
+use App\Model\Administration;
 use Nette\Application\UI\Form;
 
 /**
@@ -15,10 +15,10 @@ use Nette\Application\UI\Form;
 
 class AdministrationPresenter extends ProtectedPresenter
 {
-    protected $configuration;
+    protected $administration;
     
-    public function injectConfiguration(Configuration $c){
-        $this->configuration = $c;
+    public function injectAdministration(Administration $a){
+        $this->administration = $a;
     }
     
     private function submitCreator($form, $hname, $fname ,$option, $value){
@@ -76,5 +76,41 @@ class AdministrationPresenter extends ProtectedPresenter
         };
 
         return $form;
+    }
+    
+    public function createComponentFieldSettings(){
+        
+        $form = new Form();
+        $optDB = $this->configuration->returnOptions();
+        $this->hlp->sets("dbvals", $optDB);
+        
+        $form->addText("commision_percentage", "Market Commision")
+             ->setValue($optDB["commision_percentage"])
+             ->addRule($form::FLOAT, "V poli musí být vyplněna číselná hodnota!");
+        
+        $form->addSubmit("chbutton", "Change Configuration!");
+        $form->addSubmit("ccbutton", "Cancel Changes")->onClick[] = function (){
+            $this->redirect("Administration:global");
+        };
+        
+        $form->onSuccess[] = array($this, "fieldSuccess");
+        
+        return $form;
+    }
+    
+    public function fieldSuccess($form){
+        
+        if($form["chbutton"]->submittedBy){
+        
+            $values = $form->getValues(TRUE);   
+            $optDB = $this->hlp->sess("dbvals");
+
+            //update only changed values
+            foreach($values as $key => $value){
+               if ($value !== $optDB[$key]){
+                   $this->configuration->changeConfig($key, $value);
+               }
+            }  
+        }
     }
 }

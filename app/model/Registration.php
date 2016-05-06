@@ -21,11 +21,11 @@ class Registration extends BaseModel
     }
 
     public function assignBtcAdress($login, $address){        
-        $this->updater("users",  array('btcaddress' => $address), "login", $login);
+        $this->upd("users",  array('btcaddress' => $address), "login", $login);
     }
 
     public function checkIfUserExists($login){
-        $rslt = $this->valSelect("login", "users", "login", $login);
+        $rslt = $this->slect("login", "users", "login", $login);
 
         if ($rslt){
             throw new DuplicateNameException('Zadané jméno již v systému existuje!');

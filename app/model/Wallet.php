@@ -47,16 +47,20 @@ class Wallet extends BaseModel
     }
 	
     public function getBtcAddress($login){
-        return $this->valSelect("btcaddress", "users", "login", $login);    
+        return $this->slect("btcaddress", "users", "login", $login);    
     }
     
     public function writeNewBtcAddress($newaddress ,$login, $timestamp){        
-        $this->updater("users", array("btcaddress" => $newaddress, 
+        $this->upd("users", array("btcaddress" => $newaddress, 
             "address_request_time" => $timestamp), "login", $login);
     }
     
     public function addressLastRequest($login){      
-        return $this->valSelect("address_request_time", "users", "login", $login);
+        return $this->slect("address_request_time", "users", "login", $login);
+    }
+    
+    public function storeTransaction($type, $time, $amount, $escrow){
+        $this->nsrt("transactions", array(...));
     }
     
     public function getBalance($account){      

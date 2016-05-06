@@ -1,5 +1,10 @@
 <?php
 
+namespace App\Services;
+
+use App\Model\Configuration;
+use App\Model\Wallet;
+
 /**
  * 
  * @what Currency data getter and converter
@@ -10,15 +15,17 @@
 
 class PriceConverter {
     
-    private $connection;
+    private $connection, $configuration, $wallet;
     
     const cryptoCompareAPI = "https://www.cryptocompare.com/api/data/price?";
     const quandlFiatAPI = "https://www.quandl.com/api/v3/datasets/BOE/";     
     const quandlApiKey = "?api_key=c_eQGizpwssh1RUjy8EG"; 
     const CZK = "XUDLBK27";
     
-    public function __construct(){
+    public function __construct(Configuration $conf, Wallet $wal){
         $this->connection = curl_init();
+        $this->configuration = $conf;
+        $this->wallet = $wal;
     }
     
     private function request($api, $fiat, $coin = NULL){
@@ -66,6 +73,15 @@ class PriceConverter {
         $priceCZK = $priceInUSD * $czkPerUSD;
  
         return $priceCZK;
+    }
+    
+    public function getCommisionedPrice($price){
+        $commPerc = $this->configuration->valueGetter("commision_percentage");
+        return ($commPerc / 100) * $price;
+    }
+    
+    public function storeTransaction($type, $time, $ammount, $escrow){
+        $this->wallet->storeTransaction(); ...
     }
     
     public function convertCzkToBTC($czkPrice){

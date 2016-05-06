@@ -14,25 +14,32 @@ use Nette;
 
 class BaseHelper extends Nette\Object {
 
-	protected $app;
+    protected $app;
 
-	public function __construct($app){
-		$this->app = $app;
-	}
+    public function __construct($app){
+            $this->app = $app;
+    }
 
-	public function sugar(){
-		return $this->app->app->getPresenter();
-	}
+    public function sugar(){
+            return $this->app->app->getPresenter();
+    }
 
-    public function returnLogin(){   
+    public function logn(){   
 
        	$login = $this->sugar()->getUser()
-       				  ->getIdentity()->login;
+                      ->getIdentity()->login;
 
         return $login;
     }
 
     public function sess($section){
     	return $this->sugar()->getSession()->getSection($section);
+    }
+    
+    public function sets($section, array $args){
+        foreach($args as $key => $value){
+            $this->sugar()->getSession()->getSection($section)
+                ->$args[$key] = $value;
+        }
     }
 }
