@@ -45,11 +45,11 @@ class Orders extends BaseModel {
     }
     
     public function writeOrderToDb(array $arguments){
-        dibi::insert('orders', $arguments)->execute();
+        return $this->nsrt("orders", $arguments, TRUE);
     }
     
     public function changeOrderStatus($id, $status){     
-        $this->upd("orders", array('status' => $status), "order_id", $id);
+        $this->upd("orders", array("status" => $status), "order_id", $id);
     }
     
     public function getOrderStatus($id){

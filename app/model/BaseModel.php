@@ -77,4 +77,20 @@ class BaseModel extends \DibiRow {
             return dibi::getInsertId();
         }
     }
+    
+    public function asArg($vars){
+        
+        //returs array of associated arguments
+        //by variable name
+        
+        $args = array();
+        
+        foreach($vars as $var_name => $value) {
+            if ($var_name !== "args"){
+                $args[$var_name] = $value;
+            }
+        }
+        
+        return $args;
+    }
 }

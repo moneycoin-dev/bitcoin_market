@@ -58,9 +58,25 @@ class Wallet extends BaseModel
     public function addressLastRequest($login){      
         return $this->slect("address_request_time", "users", "login", $login);
     }
+       
+    public function storeTransaction($type, $ammount, $order_id, $escrow = NULL){
+        
+        $vars = get_defined_vars();
+        $args = $this->asArg($vars);
+        $args["donetime"] = time();
+        
+        if ($escrow == "yes"){
+            $args["status"] = "waiting";
+        } else {
+            $args["status"] = "finished";
+        }
+ 
+        $this->nsrt("transactions", $args);
+    }
     
-    public function storeTransaction($type, $time, $amount, $escrow){
-        $this->nsrt("transactions", array(...));
+    public function moveAndStore($type, $from, $to, $ammount, $order_id, $escrow = NULL){
+        $this->moveFunds($from, $to, $ammount);            
+        $this->storeTransaction($type, $ammount, $order_id, $escrow);
     }
     
     public function getBalance($account){      

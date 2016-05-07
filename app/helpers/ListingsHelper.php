@@ -15,17 +15,17 @@ use App\Model\Listings;
 
 class ListingsHelper extends BaseHelper {
 
-	protected $listings, $userManager;
+    protected $listings, $userManager;
 
-	public function injectListings(Listings $ls){
-		$this->listings = $ls;
-	}
+    public function injectListings(Listings $ls){
+            $this->listings = $ls;
+    }
 
-	public function injectUserManager(UserManager $um){
-		$this->userManager = $um;
-	}
+    public function injectUserManager(UserManager $um){
+            $this->userManager = $um;
+    }
 
-	public function imgUpload($images, $form){
+    public function imgUpload($images, $form){
         
         foreach($images as $image){
         
@@ -208,5 +208,20 @@ class ListingsHelper extends BaseHelper {
         $listingDetails = $this->listings->getActualListingValues($id);
     	$session = $this->sess("listing");
     	$session->listingDetails = $listingDetails;
+    }
+    
+    public function balanceCheck($form, $finalPrice, $error = NULL){
+        
+        $userBalance = $this->sugar()->wallet->getBalance($this->logn());
+        
+        if (!($userBalance >= $finalPrice)){
+            if (isset($error)){
+                $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
+            }
+            
+            return FALSE;
+        }
+        
+        return TRUE;
     }
 }

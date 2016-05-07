@@ -266,11 +266,15 @@ class ListingsPresenter extends ProtectedPresenter {
         $login = $this->hlp->logn();
         
         if ($this->listings->isListingAuthor($id, $login)){
-            $this->listings->enableListing($id);
-            $this->redirect("Listings:in");
-        } else {
-            $this->redirect("Listings:in");
+            
+            if (!empty($this->listings->getPostageOptions($id))){
+                $this->listings->enableListing($id);
+            } else {
+                $this->flashMessage("Prosím přidejte poštovní možnosti před zveřejněním Vašeho listingu.");
+            }
         }
+        
+        $this->redirect("Listings:in");
     }
     
     public function createComponentEditForm(){
@@ -503,23 +507,41 @@ class ListingsPresenter extends ProtectedPresenter {
         $buyerNotes = $form->getValues(TRUE)['notes'];
         $date = date("j. n. Y"); 
         $buyer = $this->hlp->logn();
-        $price = $session->finalPrice;
-        $escrowAddress = $this->configuration->valueGetter("escrow_address");
+        $price = $session->finalPriceBTC; 
         
-        $this->wallet->storeTransaction();
-      
-          
         $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
             "buyer" => $buyer, "status" => "pending", "final_price" => $price);
-
+        
         //and write new order to database
-        $this->orders->writeOrderToDb($arguments);
+        $order_id = $this->orders->writeOrderToDb($arguments);
+        
+        //value that seller will receive and market profit
+        $commisioned = $this->converter->getCommisioned($price);
+        $marketProfit = $this->converter->getMarketProfit($price);
+                
+        $wallet = $this->wallet;
+        
+        if ($this->lHelp->balanceCheck($form, $price)){
+        
+            //move funds and store trasactions into db
+            if(!$this->listings->isListingFE($listingID)){            
+                    $wallet->moveAndStore("saveprofit", $buyer, "escrow", $marketProfit, $order_id);
+                    $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "yes");
+            } else { 
+                $wallet->moveAndStore("saveprofit", $buyer, "escrow", $marketProfit, $order_id);
+                $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "no");
+            }
+            
+            $this->flashMessage("Operace proběhla úspěšně."); 
+        } else {
+            $this->flashMessage("Něco se pokazilo. Prosím kontaktujte administrátora.");
+        }
         
         //redirect user to his order list 
         //after item succesfully bought
-        $this->flashMessage('Operace proběhla úspěšně.'); 
+        
         $this->redirect('Orders:in');
     }
     
@@ -604,18 +626,18 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         $listingDetails = $session->listingDetails;
-        
+                
         //price conversions and user balance check
         $converter  = $this->converter;
         $postageBTC = $converter->convertCzkToBTC($extractedPostagePrice);
         $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
         $finalPrice = $listingBTC + $postageBTC;
-        $session->finalPrice = $finalPrice;
-        $userBalance = $this->wallet->getBalance($this->hlp->logn());
+        $session->finalPriceBTC = $finalPrice;
+        $session->finalPriceCZK = round($converter->getPriceInCZK($finalPrice));
+
+
         
-        if (!($userBalance >= $finalPrice)){
-            $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
-        }
+       // $this->lHelp->balanceCheck($form, $finalPrice, TRUE);
     }
     
     public $id;
@@ -751,6 +773,8 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->template->listingImages = $this->hlp->sess("images")->listingImages;
             $this->template->listingID = $this->hlp->sess("listing")->listingID;
             $this->template->listingDetails = $this->hlp->sess("listing")->listingDetails;
+            $this->template->finalPriceBTC =  $this->hlp->sess("listing")->finalPrice;
+            $this->template->finalPriceCZK =  $this->hlp->sess("listing")->finalPrice;
         }
     }
     

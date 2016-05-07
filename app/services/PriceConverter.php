@@ -70,27 +70,33 @@ class PriceConverter {
         $usdPerBTC = $this->getBtcToUSD();
         $priceInUSD = $btcPrice * $usdPerBTC;
         $czkPerUSD = $this->getCzkToUSD();
-        $priceCZK = $priceInUSD * $czkPerUSD;
  
-        return $priceCZK;
+        return $priceInUSD * $czkPerUSD;
     }
     
-    public function getCommisionedPrice($price){
+    public function getCommision($price){
         $commPerc = $this->configuration->valueGetter("commision_percentage");
         return ($commPerc / 100) * $price;
     }
     
-    public function storeTransaction($type, $time, $ammount, $escrow){
-        $this->wallet->storeTransaction(); ...
+    public function getCommisioned($price){
+        return $price - $this->getCommision($price);
+    }
+    
+    public function getMarketProfit($price){
+        return $this->getCommision($price);
+    }
+    
+    public function storeTransaction(){
+        $this->wallet->storeTransaction(); 
     }
     
     public function convertCzkToBTC($czkPrice){
         $usdPerBTC = $this->getBtcToUSD();
         $czkPerUSD = $this->getCzkToUSD();   
         $czkToUSD = $czkPrice / $czkPerUSD;
-        $priceBTC = $czkToUSD / $usdPerBTC;
         
-        return $priceBTC;
+        return $czkToUSD / $usdPerBTC;
     }
     
     public function __destruct(){

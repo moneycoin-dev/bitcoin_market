@@ -21,12 +21,23 @@ class AdministrationPresenter extends ProtectedPresenter
         $this->administration = $a;
     }
     
-    private function submitCreator($form, $hname, $fname ,$option, $value){
+    private function submitCreator($form, $hname, $fname ,$option, $value , $gen = NULL){
         
-            $form->addSubmit($hname, $fname)->onClick[] = function() use($option, $value){
-            $this->configuration->changeConfig($option, $value);
+            $form->addSubmit($hname, $fname)->onClick[] = function() use($option, $value, $gen){
+                
+            if (isset($gen)){
+                $address = $this->wallet->generateAddress($gen);
+                $this->configuration->changeConfig($option, $address);
+            } else {
+                $this->configuration->changeConfig($option, $value);
+            }
+            
             $this->redirect("Administration:global");
         };
+    }
+    
+    private function submitWallet(){
+        
     }
     
     public function createComponentClickableSettings(){
@@ -69,12 +80,12 @@ class AdministrationPresenter extends ProtectedPresenter
                     "dos_protection", "on");
         }
         
-        $form->addSubmit("wn", "New Escrow Wallet Address")->onClick[] = function (){
-            $address = $this->wallet->generateAddress("escrow");
-            $this->configuration->changeConfig("escrow_address", $address);
-            $this->redirect("Administration:global");
-        };
-
+        $this->submitCreator($form, "ewall", "New Escrow Wallet Adress",
+                "escrow_address", "", "escrow");
+        
+        $this->submitCreator($form, "pwall", "New Profit Wallet Adress",
+                "profit_address", "", "profit");
+        
         return $form;
     }
     
