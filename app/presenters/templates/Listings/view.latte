@@ -1,14 +1,16 @@
-{$listingDetails->product_name}
+Jméno produktu: {$listingDetails->product_name}
 <br>
-{$listingDetails->product_type}
+Typ listingu: {$listingDetails->product_type}
 <br>
-{$listingDetails->product_desc}
+Popis produktu: {$listingDetails->product_desc}
 <br>
-{$listingDetails->price}
+Cena: {$listingDetails->price}
 <br>
-{$listingDetails->ships_from}
+Země původu: {$listingDetails->ships_from}
 <br>
-{$listingDetails->ships_to}
+Země určení: {$listingDetails->ships_to}
+<br>
+<br>
 
 {foreach $listingImages as $image}
     <img src="{$basePath}/{$image}" width="70" height="70">
@@ -16,5 +18,23 @@
 
 {control buyForm}
 
+<h3> Feedback Section: </h3>
 
-
+{if $hasFeedback}
+    <table border="1" >
+        <tr>
+            <th> Uživatel </th>
+            <th> Druh </th>
+            <th> Hodnocení </th>
+            <th> Datum </th>
+        <tr>
+    {foreach $feedback as $f}
+        <tr>
+            <td> {$f->buyer} </td> <td> {$f->type} </td> <td> {$f->feedback_text} </td> 
+            <td> {$f->time|date:'%d.%m.%Y'} </td>
+        </tr>      
+    {/foreach}
+    </table>
+{else}
+    Tento listing zatím nemá žádný feedback!
+{/if}

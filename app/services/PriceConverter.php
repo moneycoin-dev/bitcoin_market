@@ -52,8 +52,10 @@ class PriceConverter {
     }
 	
     public function getBtcToUSD(){
-     
-        $price = $this->request("cc", "USD","BTC")->Data[0]->Price;    
+        $req = $this->request("cc", "USD","BTC");
+        sleep(2);
+        $price = $req->Data[0]->Price;
+        
         return $price;
     }
     

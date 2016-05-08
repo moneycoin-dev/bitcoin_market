@@ -4,7 +4,6 @@ namespace App\Presenters;
 
 use Nette;
 use App\Model\Listings;
-use App\Model\Orders;
 use App\Helpers\ListingsHelper;
 use App\Forms\ListingFormFactory;
 use App\Forms\VendorNotesFactory;
@@ -19,7 +18,7 @@ use App\Forms\VendorNotesFactory;
 
 class ListingsPresenter extends ProtectedPresenter {
     
-    protected $listings, $orders,$formFactory,
+    protected $listings, $formFactory,
               $vendorNotes, $URL, $request, $lHelp;
     
     const MAX_POSTAGE_OPTIONS = 5;
@@ -37,10 +36,6 @@ class ListingsPresenter extends ProtectedPresenter {
     
     public function injectListings(Listings $list){
         $this->listings = $list;
-    }
-    
-    public function injectOrders(Orders $o){
-        $this->orders = $o;
     }
     
     public function injectListingForm(ListingFormFactory $factory){
@@ -406,12 +401,12 @@ class ListingsPresenter extends ProtectedPresenter {
        $this->listings->updateListingImages($listingID, $images);
        $this->redirect("Listings:editListing", $listingID);
     }
-    
+
     public function handleDeleteAbort(){
         $listingID = $this->hlp->sess("listing")->listingID;
         $this->redirect("Listings:editListing", $listingID);
     }
-    
+   
     public function actionView($id){
         
         //URL not wanted
@@ -508,33 +503,39 @@ class ListingsPresenter extends ProtectedPresenter {
         $date = date("j. n. Y"); 
         $buyer = $this->hlp->logn();
         $price = $session->finalPriceBTC; 
-        
-        $arguments  = array ("author" => $author, "listing_id" => $listingID, 
+        $isFE = $this->listings->isListingFE($listingID);
+                
+        //save order to DB and do BTC transactions
+        //only if balance is sufficient
+        if ($this->wallet->balanceCheck($buyer, $price)){
+            
+            $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
             "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
-            "buyer" => $buyer, "status" => "pending", "final_price" => $price);
-        
-        //and write new order to database
-        $order_id = $this->orders->writeOrderToDb($arguments);
-        
-        //value that seller will receive and market profit
-        $commisioned = $this->converter->getCommisioned($price);
-        $marketProfit = $this->converter->getMarketProfit($price);
-                
-        $wallet = $this->wallet;
-        
-        if ($this->lHelp->balanceCheck($form, $price)){
+            "buyer" => $buyer, "status" => "pending", "final_price" => $price,
+            "FE" => $isFE ? "yes" : "no");
+
+            //and write new order to database
+            $order_id = $this->orders->writeOrderToDb($arguments);
+
+            //value that seller will receive and market profit
+            $commisioned = $this->converter->getCommisioned($price);
+            $marketProfit = $this->converter->getMarketProfit($price);
+
+            $wallet = $this->wallet;
+            
+            //save and transact market profit
+            $wallet->moveAndStore("saveprofit", $buyer, "profit", $marketProfit, $order_id);
         
             //move funds and store trasactions into db
-            if(!$this->listings->isListingFE($listingID)){            
-                    $wallet->moveAndStore("saveprofit", $buyer, "escrow", $marketProfit, $order_id);
-                    $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "yes");
+            if(!$isFE){                 
+                $wallet->moveAndStore("pay", $buyer, "escrow", $commisioned, $order_id, "yes");
             } else { 
-                $wallet->moveAndStore("saveprofit", $buyer, "escrow", $marketProfit, $order_id);
                 $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "no");
             }
             
             $this->flashMessage("Operace proběhla úspěšně."); 
+            
         } else {
             $this->flashMessage("Něco se pokazilo. Prosím kontaktujte administrátora.");
         }
@@ -634,10 +635,8 @@ class ListingsPresenter extends ProtectedPresenter {
         $finalPrice = $listingBTC + $postageBTC;
         $session->finalPriceBTC = $finalPrice;
         $session->finalPriceCZK = round($converter->getPriceInCZK($finalPrice));
-
-
         
-       // $this->lHelp->balanceCheck($form, $finalPrice, TRUE);
+       // $this->lHelp->balanceCheck($this->hlp->logn(), $finalPrice, $form);
     }
     
     public $id;
@@ -773,8 +772,21 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->template->listingImages = $this->hlp->sess("images")->listingImages;
             $this->template->listingID = $this->hlp->sess("listing")->listingID;
             $this->template->listingDetails = $this->hlp->sess("listing")->listingDetails;
-            $this->template->finalPriceBTC =  $this->hlp->sess("listing")->finalPrice;
-            $this->template->finalPriceCZK =  $this->hlp->sess("listing")->finalPrice;
+        }
+    }
+    
+    public function renderBuy(){
+        $this->template->finalPriceBTC = $this->hlp->sess("listing")->finalPriceBTC;
+        $this->template->finalPriceCZK = $this->hlp->sess("listing")->finalPriceCZK;
+    }
+    
+    public function renderView($id){
+        
+        $fdbk = $this->listings->hasFeedback($id);
+        $this->template->hasFeedback = $fdbk;
+        
+        if ($fdbk){
+            $this->template->feedback = $this->listings->getFeedback($id);
         }
     }
     

@@ -209,19 +209,4 @@ class ListingsHelper extends BaseHelper {
     	$session = $this->sess("listing");
     	$session->listingDetails = $listingDetails;
     }
-    
-    public function balanceCheck($form, $finalPrice, $error = NULL){
-        
-        $userBalance = $this->sugar()->wallet->getBalance($this->logn());
-        
-        if (!($userBalance >= $finalPrice)){
-            if (isset($error)){
-                $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
-            }
-            
-            return FALSE;
-        }
-        
-        return TRUE;
-    }
 }

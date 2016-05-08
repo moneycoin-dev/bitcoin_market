@@ -15,7 +15,7 @@ use dibi;
 class Listings extends BaseModel {
         
     public function isVendor($login){
-       $q = $this->slect("access_level", "users", "login", $login);
+       $q = $this->slc("access_level", "users", "login", $login);
        return $this->check($q, "vendor");
     }
 
@@ -25,7 +25,7 @@ class Listings extends BaseModel {
         
     public function createListing(array $values){
         $values["status"] = "disabled";
-        return $this->nsrt("listings", $values, TRUE);
+        return $this->ins("listings", $values, TRUE);
     }
     
     public function writeListingPostageOptions($listingID, array $postage){
@@ -67,7 +67,7 @@ class Listings extends BaseModel {
     }
     
     public function getPostageOptions($id){
-        return $this->slect("*", "postage", "listing_id", $id, TRUE);
+        return $this->slc("*", "postage", "listing_id", $id, TRUE);
     }
     
     public function verifyPostage($ids, $option, $price){
@@ -88,7 +88,7 @@ class Listings extends BaseModel {
     }
         
     public function getListings($author){
-        return $this->slect(array("id", "product_name", "status"), 
+        return $this->slc(array("id", "product_name", "status"), 
                 "listings", "author", $author, TRUE);
     }
     
@@ -102,13 +102,13 @@ class Listings extends BaseModel {
     
     public function getActualListingValues($id){
         
-        return $this->slect(array("id", "product_name", "product_type", 
+        return $this->slc(array("id", "product_name", "product_type", 
             "product_desc", "price", "ships_from", "ships_to", "author"
             ,"MS", "FE"), "listings", "id", $id);
     }
     
     public function getAuthor($id){       
-        return $this->slect("author", "listings", "id", $id);
+        return $this->slc("author", "listings", "id", $id);
     }
     
     public function isListingAuthor($id, $login){
@@ -117,7 +117,7 @@ class Listings extends BaseModel {
     }
     
     public function getListingImages($id){
-        return unserialize($this->slect("product_images", "listings", "id", $id));  
+        return unserialize($this->slc("product_images", "listings", "id", $id));  
     }
     
     public function updateListingImages($id, $images){        
@@ -129,11 +129,11 @@ class Listings extends BaseModel {
     }
     
     public function getListingMainImage($id){
-        return $this->slect("main_image", "listings", "id", $id);   
+        return $this->slc("main_image", "listings", "id", $id);   
     }
 
     public function getListingPrice($id){
-        return $this->slect("price", "listings", "id", $id);  
+        return $this->slc("price", "listings", "id", $id);  
     }
     
     public function enableListing($id){        
@@ -145,17 +145,25 @@ class Listings extends BaseModel {
     }
     
     public function isListingActive($id){
-        $q = $this->slect("status", "listings", "id", $id);     
+        $q = $this->slc("status", "listings", "id", $id);     
         return $this->check($q, "active");
     }
     
     public function isListingFE($id){
-        $q = $this->slect("FE", "listings", "id", $id);
+        $q = $this->slc("FE", "listings", "id", $id);
         return $this->check($q, "yes");
     }
     
     public function isListingMultisig($id){
-        $q = $this->slect("MS", "listings", "id", $id);
+        $q = $this->slc("MS", "listings", "id", $id);
         return $this->check($q, "yes");
+    }
+    
+    public function hasFeedback($id){
+        return $this->slc("listing_id", "feedback", "listing_id", $id); 
+    }
+    
+    public function getFeedback($lid){
+        return $this->slc("*", "feedback", "listing_id", $lid, TRUE);
     }
 }

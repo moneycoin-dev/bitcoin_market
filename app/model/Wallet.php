@@ -2,6 +2,8 @@
 
 namespace App\Model;
 
+use dibi;
+
 /**
  * 
  * @what Wallet data model class and command wrappper
@@ -47,7 +49,7 @@ class Wallet extends BaseModel
     }
 	
     public function getBtcAddress($login){
-        return $this->slect("btcaddress", "users", "login", $login);    
+        return $this->slc("btcaddress", "users", "login", $login);    
     }
     
     public function writeNewBtcAddress($newaddress ,$login, $timestamp){        
@@ -56,7 +58,7 @@ class Wallet extends BaseModel
     }
     
     public function addressLastRequest($login){      
-        return $this->slect("address_request_time", "users", "login", $login);
+        return $this->slc("address_request_time", "users", "login", $login);
     }
        
     public function storeTransaction($type, $ammount, $order_id, $escrow = NULL){
@@ -71,7 +73,35 @@ class Wallet extends BaseModel
             $args["status"] = "finished";
         }
  
-        $this->nsrt("transactions", $args);
+        $this->ins("transactions", $args);
+    }
+    
+    public function balanceCheck($acc, $finalPrice, $form = NULL){
+        
+        $userBalance = $this->getBalance($acc);
+        
+        if (!($userBalance >= $finalPrice)){
+            if (isset($form)){
+                $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
+            }
+            
+            return FALSE;
+        }
+        
+        return TRUE;
+    }
+    
+    public function changeTransactionState($state, $oid){
+        dibi::update("transactions", array("status" => $state))
+                ->where(array("order_id" => $oid))
+                ->where(array("type" => "pay"))
+                ->execute();      
+    }
+    
+    public function getEscrowed($oid){
+        return dibi::select("ammount")->from("transactions")
+                    ->where(array("order_id" => $oid))
+                    ->where(array("type" => "pay"))->fetch();
     }
     
     public function moveAndStore($type, $from, $to, $ammount, $order_id, $escrow = NULL){

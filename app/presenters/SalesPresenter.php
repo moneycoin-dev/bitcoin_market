@@ -25,13 +25,7 @@ class SalesPresenter extends ProtectedPresenter {
         $session = $this->getSession()->getSection("orders");
         $session->orderID = $id;
     }
-    
-    protected $orders;
-    
-    public function injectOrders(Orders $o){
-        $this->orders = $o;
-    }
-    
+        
     public function renderOn($param = 1){
         
         $paginator = new Paginator();

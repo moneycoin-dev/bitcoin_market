@@ -35,17 +35,17 @@ class Orders extends BaseModel {
     }
     
     public function isOwner($id, $login){  
-        $q = $this->slect("author", "orders", "order_id", $id);
+        $q = $this->slc("author", "orders", "order_id", $id);
         return $this->check($q, $login);
     }
     
     public function getOrderParticipants($orderId){        
-        return $this->slect(array("author", "buyer"), "orders", 
+        return $this->slc(array("author", "buyer"), "orders", 
                 "order_id", $orderId);
     }
     
     public function writeOrderToDb(array $arguments){
-        return $this->nsrt("orders", $arguments, TRUE);
+        return $this->ins("orders", $arguments, TRUE);
     }
     
     public function changeOrderStatus($id, $status){     
@@ -53,11 +53,11 @@ class Orders extends BaseModel {
     }
     
     public function getOrderStatus($id){
-        return $this->slect("status", "orders", "order_id", $id);
+        return $this->slc("status", "orders", "order_id", $id);
     }
     
     public function isOrderFinalized($id){        
-        $q = $this->slect("finalized", "orders", "order_id", $id);
+        $q = $this->slc("finalized", "orders", "order_id", $id);
         return $this->check($q, "yes");
     }
     
@@ -65,8 +65,18 @@ class Orders extends BaseModel {
         $this->upd("orders", array('finalized' => 'yes'), "order_id", $id);
     }
     
+    public function hasFeedback($id){
+        $q = $this->slc("order_id", "feedback", "order_id", $id); 
+        return $this->check($q, NULL); //returns false
+    }
+    
+    public function saveFeedback($feedback){
+        $feedback["time"] = time();
+        $this->ins("feedback", $feedback);
+    }
+    
     public function getOrderDetails($id){
-        return $this->slect("*", "orders", "order_id", $id, TRUE)[0];
+        return $this->slc("*", "orders", "order_id", $id, TRUE)[0];
     }
     
     public function writeSellerNotes($id, $notes){
@@ -76,7 +86,7 @@ class Orders extends BaseModel {
     
     public function getNotesLeft($id, $seller = NULL){
         $string = isset($seller) ? 'seller_notes' : 'buyer_notes';       
-        return $this->slect($string, "orders", "order_id", $id);
+        return $this->slc($string, "orders", "order_id", $id);
     }
     
     public function writeDisputeContents($order,$message,$timestamp, $autor){

@@ -39,7 +39,7 @@ class BaseHelper extends Nette\Object {
     public function sets($section, array $args){
         foreach($args as $key => $value){
             $this->sugar()->getSession()->getSection($section)
-                ->$args[$key] = $value;
+                ->$key = $value;
         }
     }
 }

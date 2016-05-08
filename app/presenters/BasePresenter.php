@@ -6,6 +6,7 @@ use Nette;
 use App\BitcoindAuth as BTCAuth;
 use App\Helpers\BaseHelper;
 use App\Model\Wallet;
+use App\Model\Orders;
 use App\Model\Configuration;
 use App\Services\PriceConverter;
 
@@ -20,7 +21,8 @@ use App\Services\PriceConverter;
 abstract class BasePresenter extends Nette\Application\UI\Presenter
 {
 
-    public $wallet, $hlp, $configuration, $converter;
+    public $wallet, $hlp, $configuration,
+            $orders, $converter;
     
     public function injectBaseHelper(BaseHelper $bh){
         $this->hlp = $bh;
@@ -32,6 +34,10 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
     
     public function injectPriceConverter(PriceConverter $conv){
         $this->converter = $conv;
+    }
+    
+    public function injectOrders(Orders $o){
+        $this->orders = $o;
     }
 
     protected function startup(){

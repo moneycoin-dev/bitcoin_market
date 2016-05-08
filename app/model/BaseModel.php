@@ -14,7 +14,7 @@ use dibi;
 
 class BaseModel extends \DibiRow {
     
-    public function slect($what, $from, $where, $by, $all = NULL){
+    public function slc($what, $from, $where, $by, $all = NULL){
         
         //db select shortcut function
         
@@ -56,6 +56,9 @@ class BaseModel extends \DibiRow {
         
         //db result value checker    
         if ($q == $wanted){
+            if($q == NULL){
+                return FALSE;
+            }
             return TRUE;
         }
 
@@ -69,7 +72,7 @@ class BaseModel extends \DibiRow {
             ->where(array($where => $by))->execute();
     }
     
-    public function nsrt($where, array $what, $insId = NULL){
+    public function ins($where, array $what, $insId = NULL){
         
         dibi::insert($where, $what)->execute();
         

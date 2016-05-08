@@ -25,7 +25,7 @@ class Registration extends BaseModel
     }
 
     public function checkIfUserExists($login){
-        $rslt = $this->slect("login", "users", "login", $login);
+        $rslt = $this->slc("login", "users", "login", $login);
 
         if ($rslt){
             throw new DuplicateNameException('Zadané jméno již v systému existuje!');

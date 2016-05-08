@@ -16,7 +16,7 @@ use Nette\Security\Passwords;
 class Settings extends BaseModel
 {             
     public function selectById($id, $what){       
-        return $this->slect($what, "users", "id", $id);
+        return $this->slc($what, "users", "id", $id);
     }
 
     public function selectByLogin($login){

@@ -37,7 +37,7 @@ class Configuration extends BaseModel {
     }
     
     public function valueGetter($option){
-        return $this->slect("value", "config", "option", $option);
+        return $this->slc("value", "config", "option", $option);
     }
     
     public function returnOptions(){

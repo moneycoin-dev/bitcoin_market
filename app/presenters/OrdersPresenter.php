@@ -2,9 +2,7 @@
 
 namespace App\Presenters;
 
-use App\Model\Orders;
 use App\Model\Listings;
-use App\Model\Configuration;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
 
@@ -18,19 +16,13 @@ use Nette\Utils\Paginator;
 
 class OrdersPresenter extends ProtectedPresenter {
     
-    protected $orders;
     protected $listings;
 
-    public function injectOrders(Orders $o){
-        $this->orders = $o;
-    }
-    
     public function injectListings(Listings $l){
         $this->listings = $l;
     }
     
     public function isFinalized($id){
-        
         return $this->orders->isOrderFinalized($id);
     }
     
@@ -105,9 +97,15 @@ class OrdersPresenter extends ProtectedPresenter {
             };
 
             $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
-
+                
                 $id = $this->getOrderId();
+                $author = $this->orders->getOrderDetails($id)["author"];
+                $escrowed = $this->wallet->getEscrowed($id);
                 $this->orders->orderFinalize($id);
+                $this->wallet->moveFunds("escrow", $author, $escrowed);
+                $this->wallet->changeTransactionState("finished", $id);
+                $this->flashMessage("Vaše objednávka byla finalizována!");
+                $this->redirect("Orders:Feedback", $id);
             };    
         }
          
@@ -126,17 +124,10 @@ class OrdersPresenter extends ProtectedPresenter {
         
          return $form;
     }
-    
-    protected $cm;
-    
-    public function injectX(Configuration $cm){
-        $this->cm = $cm;
-    }
 
     public function actionView($id){
         
-       // $this->cm->changeWithdrawalsState("enabled");
-        dump($this->cm->areWithdrawalsEnabled());
+      //  dump($this->wallet->getBalance("fagan23"));
         
         $this->setOrderId($id);     
         $login = $this->getUser()->getIdentity()->login;
@@ -170,7 +161,7 @@ class OrdersPresenter extends ProtectedPresenter {
        $id =  $this->getOrderId();     
        $timestamp = time();
        $autor = $this->getUser()->getIdentity()->login;
-       $this->orders->writeDisputeContents($id, $values['complaintMessage'],
+       $this->orders->writeDisputeContents($id, $values["complaintMessage"],
                $timestamp, $autor);
 
        $this->redirect("Orders:dispute", $id);
@@ -178,7 +169,7 @@ class OrdersPresenter extends ProtectedPresenter {
     
     public function actionDispute($id){
         
-        $login = $this->getUser()->getIdentity()->login;
+        $login = $this->hlp->logn();
         $orderStatus = $this->orders->getOrderStatus($id);
         $participants = $this->orders->getOrderParticipants($id);
         
@@ -192,5 +183,76 @@ class OrdersPresenter extends ProtectedPresenter {
         } else {
             $this->redirect("Orders:in");
         }
+    }
+    
+    public function actionFeedback($id){
+        $finalized = $this->orders->isOrderFinalized($id);
+        $hasFeedback = $this->orders->hasFeedback($id);
+        
+        if (!($finalized && !$hasFeedback)){
+            $this->redirect("Orders:in");
+        } else {
+            $this->hlp->sets("order", array("orderid" => $id));
+        }
+    }
+    
+    protected $feedbackType = array("positive" => "Pozitivní", 
+                                    "neutral" => "Neutrální", "negative" => "Negativní");
+    
+    private $feedbackMarks = array("1/5" => "1/5 - Velmi špatné", "2/5" => "2/5 - Špatné",
+            "3/5" => "3/5 - Dostačující", "4/5" => "4/5 - Dobré","5/5" => "5/5 - Výborné");
+    
+    public function createComponentFeedbackForm(){
+        $form = new Form();
+        $form->addRadioList("type", "Vaše zkušenost:", $this->feedbackType)
+             ->addRule($form::FILLED, "Prosím zvolte možnost odpovídající Vaší zkušenosti");
+        
+       krsort($this->feedbackMarks);
+       $marks = $this->feedbackMarks;
+        
+        $form->addSelect("postage", "Rychlost doručení:", $marks);
+        $form->addSelect("stealth", "Balení & Stealth:", $marks);
+        $form->addSelect("quality", "Kvalita produktu:", $marks);
+        $form->addTextArea("feedback_text", "Popište Vaši zkušenost:", 60, 10);
+        $form->addSubmit("odeslat", "Odeslat Feedback!");
+        $form->onSuccess[] = array($this, "feedbackSuccess");
+        $form->onValidate[] = array($this, "feedbackValidate");
+        
+        return $form;
+    }
+    
+    public function feedbackValidate($form){
+        $values = $form->getValues(TRUE);
+      
+        if (!key_exists($values["type"], $this->feedbackType)){
+            $form->addError("Detekovány úpravy formuláře na straně klienta! [Radio]");
+        }
+     
+        $index = array("postage", "stealth", "quality");
+        
+        foreach($index as $i){
+            
+            if (!key_exists($values[$i], $this->feedbackMarks)){
+                $form->addError("Detekovány úpravy formuláře na straně klienta! [Select]");
+            }
+        }
+    }
+    
+    public function feedbackSuccess($form){
+        $values = $form->getValues(TRUE);
+          
+        if ($values["feedback_text"] == ""){
+            $values["feedback_text"] = "Uživatel nezanechal žádný komentář";
+        }
+        
+        $orderId = $this->hlp->sess("order")->orderid;
+  
+        $values["order_id"] = $orderId;
+        $values["listing_id"] = $this->orders->getOrderDetails($orderId)["listing_id"];
+        $values["buyer"] = $this->hlp->logn();
+
+        $this->orders->saveFeedback($values);
+        $this->flashMessage("Feedback úspěšně uložen");
+        $this->redirect("Orders:in");
     }
 }
