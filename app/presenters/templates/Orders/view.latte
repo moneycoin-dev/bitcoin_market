@@ -10,7 +10,7 @@ Status: {$orderInfo->status }
 {dump $orderInfo}
 
 {if $fdbk}
-    <a n:href="Orders:Feedback (expand) array($orderInfo->order_id, 1) ">Změnit Finalize Early Feedback </a>
+    <a n:href="Orders:Feedback $orderInfo->order_id">Změnit Finalize Early Feedback </a>
 {/if}
 
 {control finalizeForm}

@@ -52,15 +52,25 @@ class FeedbackFormFactory extends Nette\Object
         }
     }
     
-    /** @var array Storage of dependencies from LP */
-    protected $dependencies;
+    /** @var Presenter Storage of dependencies from LP */
+    protected $presenter;
     
     /** 
      * Setter for Listings dependencies
-     * @param array $deps
+     * @param Presenter $presenter
      */
-    public function setDeps(array $deps){
-        $this->dependencies = $deps;
+    public function setPresenter($presenter){
+        $this->presenter = $presenter;
+    }
+    
+    /**
+     * Getter for $presenter must be set
+     * otherwise Nette\Object throws write only error
+     * 
+     * @return Presenter
+     */
+    public function getPresenter(){
+        return $this->presenter;
     }
     
     /**
@@ -101,6 +111,7 @@ class FeedbackFormFactory extends Nette\Object
         }
         
         $form->onValidate[] = array($this, "feedbackValidate");
+        $form->onSuccess[] = array($this, "feedbackSuccess");
 
         return $form;
     }
@@ -139,18 +150,26 @@ class FeedbackFormFactory extends Nette\Object
             $values["feedback_text"] = "Uživatel nezanechal žádný komentář";
         }
         
-        $orderId = $this->deps["session"]->orderid;
-        $values["order_id"] = $orderId;
-        $values["listing_id"] = $this->deps["orders"]->getDetails($orderId)["listing_id"];
-        $values["buyer"] = $this->hlp->logn();
+        $presenter = $this->getPresenter();
+        $orderid = $presenter->hlp->sess("feedback")->orderid;
+        $values["order_id"] = $orderid;
+        $values["listing_id"] = $presenter->orders->getDetails($orderid)["listing_id"];
+        $values["buyer"] = $presenter->hlp->logn();
         
-        if ($form["odeslat"]->submittedBy){
-            $this->orders->saveFeedback($values);
-        } else {
-            $this->orders->updateFeedback($orderId, $values);
+        //button checking for different types of form
+        $send = isset($form["odeslat"]) ? $form["odeslat"] : NULL;
+        
+        if ($send){    
+            if ($send->submittedBy){
+                $presenter->orders->saveFeedback($values);
+            }
+        }  else {
+            if ($form["upravit"]->submittedBy){
+                $presenter->orders->updateFeedback($orderid, $values);
+            }
         }
  
-        $this->flashMessage("Feedback úspěšně uložen");
-        $this->redirect("Orders:in");
+        $presenter->flashMessage("Feedback úspěšně uložen");
+        $presenter->redirect("Listings:view", $values["listing_id"]); 
     }
 }

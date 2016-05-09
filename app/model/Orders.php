@@ -84,8 +84,12 @@ class Orders extends BaseModel {
         $this->upd("feedback", $feedback, "order_id", $oid);
     }
     
-    public function getFbChanges($lid){
-        return $this->slc("changed", "feedback", "order_id", $lid);
+    public function fbInc($oid){
+        $this->upd("feedback", array("changed" => +1), "order_id", $oid);
+    }
+    
+    public function getFbChanges($oid){
+        return $this->slc("changed", "feedback", "order_id", $oid);
     }
     
     public function getDetails($id){

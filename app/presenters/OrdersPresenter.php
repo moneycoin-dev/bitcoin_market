@@ -158,17 +158,16 @@ class OrdersPresenter extends ProtectedPresenter {
                ->setValue($buyer_notes);
         
         if ($order["buyer"] == $login || $order["author"] == $login){
+            
+            
             $this->template->isVendor = $this->listings->isVendor($login);
             $this->template->isFinalized = $this->orders->isFinalized($id);
             $this->template->orderInfo = $order;
             $this->template->fdbk = FALSE;
             
-            //get number of feedback changes
-            $fbChanges = $this->orders->getFbChanges($id);
-            
             //if changes are 0 give option to change FE feedback 
             if($order["buyer"] == $login){
-                if ($order["FE"] == "yes" && $fbChanges == 0){
+                if ($order["FE"] == "yes" && $this->isFbChA($id)){
                    $this->template->fdbk  = TRUE;
                 }
             }
@@ -234,13 +233,23 @@ class OrdersPresenter extends ProtectedPresenter {
     }
     
     /**
+     * Checks if user is able to modify feedback
+     * 
+     * @param int $id order id for getting feedback info
+     * @return bool
+     */
+    private function isFbChA($id){
+        return $this->orders->getFbChanges($id) == 0 ? TRUE : FALSE;
+    }
+    
+    /**
      * Determines what type of feedback form create
      * Based on session settings and redirect malicious users
      * 
      * @param int $id order id from URL
      */
     public function actionFeedback($id){
-        $finalized = $this->orders->isFinalized($id);
+        $finalized   = $this->orders->isFinalized($id);
         $hasFeedback = $this->orders->hasFeedback($id);
         $details = $this->orders->getDetails($id);
         
@@ -250,10 +259,21 @@ class OrdersPresenter extends ProtectedPresenter {
         $this->hlp->sets("feedback", array("orderid" => $id));
         
         if ($isBuyer){
-            if ($finalized){
+            if ($finalized){        
                 if ($hasFeedback && $fe){
-                    $this->hlp->sets("feedback", array("FEedit" => TRUE));
-                } 
+                    //FE order has ability to change feedback one time
+                    if ($this->isFbChA($id)){
+                        $this->hlp->sets("feedback", array("FEedit" => TRUE));
+                        $this->orders->fbInc($id); //inc fb change counter
+                    } else {
+                        $this->redirect("Orders:in");
+                    }
+                }
+                
+                if ($hasFeedback && !$fe){
+                    //escrowed order has no ability to change feedback
+                    $this->redirect("Orders:in");
+                }
 
                 if (!$hasFeedback && $fe){
                     $this->hlp->sets("feedback", array("FE" => TRUE));
@@ -261,7 +281,7 @@ class OrdersPresenter extends ProtectedPresenter {
 
                 if (!$hasFeedback && !$fe){
                     $this->hlp->sets("feedback", array("escrow" => TRUE));
-                }
+                }        
             } else {
                 $this->redirect("Orders:in");
             }
@@ -281,9 +301,9 @@ class OrdersPresenter extends ProtectedPresenter {
         $sess = $this->hlp->sess("feedback");
         $orderid = $sess->orderid;
        
-        //transmit form handler's dependencies
-        $deps = array("session" => $sess, "orders" => $this->orders);
-        $this->fFactory->setDeps($deps);
+        //set presenter as param due to
+        //form handler function dependencies
+        $this->fFactory->setPresenter($this->getPresenter());
        
         //finalize early first feedback attempt
         if (isset($sess->FE)){

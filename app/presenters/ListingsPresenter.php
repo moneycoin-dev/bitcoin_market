@@ -539,7 +539,7 @@ class ListingsPresenter extends ProtectedPresenter {
                 $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "no");
                 $this->flashMessage("Finalize Early - Platba převedena na vendorův účet.");
                 $this->flashMessage("Zanechte feedback - Můžete později změnit ve Vašich objednávkách.");
-                $this->redirect("Orders:Feedback", $order_id, $isFE);
+                $this->redirect("Orders:Feedback", $order_id);
             }
         /*    
         } else {
