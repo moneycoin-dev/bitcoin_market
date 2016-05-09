@@ -36,10 +36,6 @@ class AdministrationPresenter extends ProtectedPresenter
         };
     }
     
-    private function submitWallet(){
-        
-    }
-    
     public function createComponentClickableSettings(){
                  
         $form = new Form();

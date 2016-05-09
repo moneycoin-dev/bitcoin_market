@@ -23,7 +23,7 @@ class Listings extends BaseModel {
         $this->upd("users", array('access_level' => 'vendor'), "login", $login);
     }
         
-    public function createListing(array $values){
+    public function create(array $values){
         $values["status"] = "disabled";
         return $this->ins("listings", $values, TRUE);
     }
@@ -92,11 +92,11 @@ class Listings extends BaseModel {
                 "listings", "author", $author, TRUE);
     }
     
-    public function editListing($id, $values){
+    public function edit($id, $values){
         return $this->upd("listings", $values, "id", $id);
     }
     
-    public function deleteListing($id){
+    public function delete($id){
         return dibi::delete('listings')->where('id = %i', $id)->execute();
     }
     
@@ -124,37 +124,37 @@ class Listings extends BaseModel {
         $this->upd("listings", array("product_images" => $images), "id", $id);
     }
     
-    public function setListingMainImage($id, $imgNum){
+    public function setMainImage($id, $imgNum){
         $this->upd("listings", array('main_image' => $imgNum), "id", $id);
     }
     
-    public function getListingMainImage($id){
+    public function getMainImage($id){
         return $this->slc("main_image", "listings", "id", $id);   
     }
 
-    public function getListingPrice($id){
+    public function getPrice($id){
         return $this->slc("price", "listings", "id", $id);  
     }
     
-    public function enableListing($id){        
+    public function enable($id){        
         return $this->upd("listings", array('status' => 'active'), "id", $id);
     }
     
-    public function disableListing($id){       
+    public function disable($id){       
         return $this->upd("listings", array("status" => "disabled"), "id", $id);
     }
     
-    public function isListingActive($id){
+    public function isActive($id){
         $q = $this->slc("status", "listings", "id", $id);     
         return $this->check($q, "active");
     }
     
-    public function isListingFE($id){
+    public function isFE($id){
         $q = $this->slc("FE", "listings", "id", $id);
         return $this->check($q, "yes");
     }
     
-    public function isListingMultisig($id){
+    public function isMultisig($id){
         $q = $this->slc("MS", "listings", "id", $id);
         return $this->check($q, "yes");
     }

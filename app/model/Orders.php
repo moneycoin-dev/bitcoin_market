@@ -39,35 +39,35 @@ class Orders extends BaseModel {
         return $this->check($q, $login);
     }
     
-    public function getOrderParticipants($orderId){        
+    public function getParticipants($orderId){        
         return $this->slc(array("author", "buyer"), "orders", 
                 "order_id", $orderId);
     }
     
-    public function writeOrderToDb(array $arguments){
+    public function saveToDB(array $arguments){
         return $this->ins("orders", $arguments, TRUE);
     }
     
-    public function changeOrderStatus($id, $status){     
+    public function changeStatus($id, $status){     
         $this->upd("orders", array("status" => $status), "order_id", $id);
     }
     
-    public function getOrderStatus($id){
+    public function getStatus($id){
         return $this->slc("status", "orders", "order_id", $id);
     }
     
-    public function isOrderFinalized($id){        
+    public function isFinalized($id){        
         $q = $this->slc("finalized", "orders", "order_id", $id);
         return $this->check($q, "yes");
     }
     
-    public function orderFinalize($id){
+    public function finalize($id){
         $this->upd("orders", array('finalized' => 'yes'), "order_id", $id);
     }
     
     public function hasFeedback($id){
         $q = $this->slc("order_id", "feedback", "order_id", $id); 
-        return $this->check($q, NULL); //returns false
+        return isset($q);
     }
     
     public function saveFeedback($feedback){
@@ -75,11 +75,24 @@ class Orders extends BaseModel {
         $this->ins("feedback", $feedback);
     }
     
-    public function getOrderDetails($id){
+    public function getFeedback($oid){
+       return $this->slc("*", "feedback", "order_id", $oid, TRUE);
+    }
+    
+    public function updateFeedback($oid, $feedback){
+        $feedback["time"] = time();
+        $this->upd("feedback", $feedback, "order_id", $oid);
+    }
+    
+    public function getFbChanges($lid){
+        return $this->slc("changed", "feedback", "order_id", $lid);
+    }
+    
+    public function getDetails($id){
         return $this->slc("*", "orders", "order_id", $id, TRUE)[0];
     }
     
-    public function writeSellerNotes($id, $notes){
+    public function saveSellerNotes($id, $notes){
         dibi::update('orders', array('seller_notes' => $notes))
                 ->where('order_id = %i', $id)->execute();
     }
@@ -89,7 +102,7 @@ class Orders extends BaseModel {
         return $this->slc($string, "orders", "order_id", $id);
     }
     
-    public function writeDisputeContents($order,$message,$timestamp, $autor){
+    public function saveDisputeContents($order,$message,$timestamp, $autor){
         dibi::insert('disputes', array('order' => $order, 'message' => $message,
             'timestamp' => $timestamp, 'autor' => $autor))->execute();
     }

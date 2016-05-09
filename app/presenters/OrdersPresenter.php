@@ -3,6 +3,7 @@
 namespace App\Presenters;
 
 use App\Model\Listings;
+use App\Forms\FeedbackFormFactory;
 use Nette\Application\UI\Form;
 use Nette\Utils\Paginator;
 
@@ -16,14 +17,18 @@ use Nette\Utils\Paginator;
 
 class OrdersPresenter extends ProtectedPresenter {
     
-    protected $listings;
+    protected $listings, $fFactory;
 
     public function injectListings(Listings $l){
         $this->listings = $l;
     }
     
+    public function injectFeedbackForm(FeedbackFormFactory $fFactory){
+        $this->fFactory = $fFactory;
+    }
+    
     public function isFinalized($id){
-        return $this->orders->isOrderFinalized($id);
+        return $this->orders->isFinalized($id);
     }
     
     private function getOrderId(){
@@ -37,9 +42,15 @@ class OrdersPresenter extends ProtectedPresenter {
     }
     
     private function shippedStatus(){
-        return $this->orders->getOrderStatus($this->getOrderId());
+        return $this->orders->getStatus($this->getOrderId());
     }
-
+   
+    /**
+     * Renders user orders and paginates results
+     * 
+     * @param int $active Paginator page for active orders
+     * @param int $closed Paginator page for closed orders
+     */
     public function renderIn($active = 1, $closed = 1){
         
         $pagActive = new Paginator();
@@ -50,7 +61,7 @@ class OrdersPresenter extends ProtectedPresenter {
         $pagClosed->setItemsPerPage(2);
         $pagClosed->setPage($closed);
       
-        $login = $this->getUser()->getIdentity()->login;
+        $login = $this->hlp->logn();
         $pendingOrders = $this->orders->getOrders($login,"pending", $pagActive);
         $closedOrders = $this->orders->getOrders($login, "closed", $pagClosed);
         $disputes = $this->orders->getOrders($login, "dispute");
@@ -61,7 +72,7 @@ class OrdersPresenter extends ProtectedPresenter {
         
         //store page count into session
         //doesn't render paginator on subsequent pages without this code
-        $session = $this->getSession()->getSection("paginator");
+        $session = $this->hlp->sess("paginator");
         
         if (is_null($session->totalOrders)){
             $session->totalOrders = $pagActive->getPageCount();
@@ -79,9 +90,13 @@ class OrdersPresenter extends ProtectedPresenter {
         $this->template->pendingOrders = $pendingOrders;
         $this->template->closedOrders = $closedOrders;
 
-        unset($session);
+        $this->hlp->sess("feedback")->remove();
     }
     
+    /**
+     * Creates Finalize Form For escrowed orders
+     * @return Form
+     */
     public function createComponentFinalizeForm(){
         
         $form = new Form();
@@ -92,46 +107,51 @@ class OrdersPresenter extends ProtectedPresenter {
             $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
 
                 $id = $this->getOrderId();   
-                $this->orders->changeOrderStatus($id, "dispute");
+                $this->orders->changeStatus($id, "dispute");
                 $this->redirect("Orders:dispute", $id);
             };
 
             $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
                 
                 $id = $this->getOrderId();
-                $author = $this->orders->getOrderDetails($id)["author"];
+                $author = $this->orders->getDetails($id)["author"];
                 $escrowed = $this->wallet->getEscrowed($id);
-                $this->orders->orderFinalize($id);
+                $this->orders->finalize($id);
                 $this->wallet->moveFunds("escrow", $author, $escrowed);
                 $this->wallet->changeTransactionState("finished", $id);
                 $this->flashMessage("Vaše objednávka byla finalizována!");
                 $this->redirect("Orders:Feedback", $id);
             };    
-        }
-         
+        }    
         return $form;
     }
     
-    public function createComponentPartialReleaseForm(){
-        
+    /**
+     * Creates form for partial Escrow Release
+     * @return Form
+     */
+    public function createComponentPartialReleaseForm(){ 
         $form = new Form();
         
         if ($this->shippedStatus() == "Shipped"){
            
             $form->addText("amount", "Částka k uvolnění:");
             $form->addSubmit("submit", "Uvolnit");
-        }
-        
+        }   
          return $form;
     }
-
+    
+    /**
+     * Displays order info and makes sure
+     * that only buyer and vendor can view particular order
+     * 
+     * @param int $id order id from URL
+     */
     public function actionView($id){
         
-      //  dump($this->wallet->getBalance("fagan23"));
-        
         $this->setOrderId($id);     
-        $login = $this->getUser()->getIdentity()->login;
-        $order = $this->orders->getOrderDetails($id);
+        $login = $this->hlp->logn();
+        $order = $this->orders->getDetails($id);
         $buyer_notes = $this->orders->getNotesLeft($id);
         
        $this->getComponent("finalizeForm")->getComponents()["buyer_notes"]
@@ -139,13 +159,29 @@ class OrdersPresenter extends ProtectedPresenter {
         
         if ($order["buyer"] == $login || $order["author"] == $login){
             $this->template->isVendor = $this->listings->isVendor($login);
-            $this->template->isFinalized = $this->orders->isOrderFinalized($id);
+            $this->template->isFinalized = $this->orders->isFinalized($id);
             $this->template->orderInfo = $order;
+            $this->template->fdbk = FALSE;
+            
+            //get number of feedback changes
+            $fbChanges = $this->orders->getFbChanges($id);
+            
+            //if changes are 0 give option to change FE feedback 
+            if($order["buyer"] == $login){
+                if ($order["FE"] == "yes" && $fbChanges == 0){
+                   $this->template->fdbk  = TRUE;
+                }
+            }
+            
         } else {
             $this->redirect("Orders:in");
         }
     }
     
+    /**
+     * Creates Complaint Form
+     * @return Form
+     */
     public function createComponentDisputeComplaint(){
         $form = new Form();
         $form->addTextArea("complaintMessage", "Text zprávy" );
@@ -156,22 +192,34 @@ class OrdersPresenter extends ProtectedPresenter {
         return $form;
     }
     
+    /**
+     * Complaint Form Success callback
+     * Saves data into database and redirects to dispute chat
+     * 
+     * @param Form $form
+     */
     public function sendComplaint($form){
        $values = $form->getValues(TRUE);
        $id =  $this->getOrderId();     
        $timestamp = time();
        $autor = $this->getUser()->getIdentity()->login;
-       $this->orders->writeDisputeContents($id, $values["complaintMessage"],
+       $this->orders->saveDisputeContents($id, $values["complaintMessage"],
                $timestamp, $autor);
 
        $this->redirect("Orders:dispute", $id);
     }
     
+    /**
+     * Lets user create dispute if he is not satisfied
+     * Makes sure only order participants can view it
+     * 
+     * @param int $id order id from URL
+     */
     public function actionDispute($id){
         
         $login = $this->hlp->logn();
-        $orderStatus = $this->orders->getOrderStatus($id);
-        $participants = $this->orders->getOrderParticipants($id);
+        $orderStatus = $this->orders->getStatus($id);
+        $participants = $this->orders->getParticipants($id);
         
         if ($orderStatus == "Shipped" || $orderStatus == "dispute"){
             if ($login == $participants["author"] || $login == $participants["buyer"]){
@@ -185,74 +233,84 @@ class OrdersPresenter extends ProtectedPresenter {
         }
     }
     
+    /**
+     * Determines what type of feedback form create
+     * Based on session settings and redirect malicious users
+     * 
+     * @param int $id order id from URL
+     */
     public function actionFeedback($id){
-        $finalized = $this->orders->isOrderFinalized($id);
+        $finalized = $this->orders->isFinalized($id);
         $hasFeedback = $this->orders->hasFeedback($id);
+        $details = $this->orders->getDetails($id);
         
-        if (!($finalized && !$hasFeedback)){
-            $this->redirect("Orders:in");
+        $fe = $details["FE"] == "yes" ? TRUE : FALSE;
+        $isBuyer = $details["buyer"] == $this->hlp->logn() ? TRUE : FALSE;
+              
+        $this->hlp->sets("feedback", array("orderid" => $id));
+        
+        if ($isBuyer){
+            if ($finalized){
+                if ($hasFeedback && $fe){
+                    $this->hlp->sets("feedback", array("FEedit" => TRUE));
+                } 
+
+                if (!$hasFeedback && $fe){
+                    $this->hlp->sets("feedback", array("FE" => TRUE));
+                }
+
+                if (!$hasFeedback && !$fe){
+                    $this->hlp->sets("feedback", array("escrow" => TRUE));
+                }
+            } else {
+                $this->redirect("Orders:in");
+            }
         } else {
-            $this->hlp->sets("order", array("orderid" => $id));
+            $this->redirect("Orders:in");
         }
     }
     
-    protected $feedbackType = array("positive" => "Pozitivní", 
-                                    "neutral" => "Neutrální", "negative" => "Negativní");
-    
-    private $feedbackMarks = array("1/5" => "1/5 - Velmi špatné", "2/5" => "2/5 - Špatné",
-            "3/5" => "3/5 - Dostačující", "4/5" => "4/5 - Dobré","5/5" => "5/5 - Výborné");
-    
-    public function createComponentFeedbackForm(){
-        $form = new Form();
-        $form->addRadioList("type", "Vaše zkušenost:", $this->feedbackType)
-             ->addRule($form::FILLED, "Prosím zvolte možnost odpovídající Vaší zkušenosti");
+    /**
+     * Creates form based on settings from 
+     * actionFeedback
+     * 
+     * @return Form
+     */
+    public function createComponentFeedbackCreate(){
         
-       krsort($this->feedbackMarks);
-       $marks = $this->feedbackMarks;
+        $sess = $this->hlp->sess("feedback");
+        $orderid = $sess->orderid;
+       
+        //transmit form handler's dependencies
+        $deps = array("session" => $sess, "orders" => $this->orders);
+        $this->fFactory->setDeps($deps);
+       
+        //finalize early first feedback attempt
+        if (isset($sess->FE)){
+            $form = $this->fFactory->create($sess->FE); 
+            $form->addSubmit("odeslat", "Odeslat Feedback!");
+        }
         
-        $form->addSelect("postage", "Rychlost doručení:", $marks);
-        $form->addSelect("stealth", "Balení & Stealth:", $marks);
-        $form->addSelect("quality", "Kvalita produktu:", $marks);
-        $form->addTextArea("feedback_text", "Popište Vaši zkušenost:", 60, 10);
-        $form->addSubmit("odeslat", "Odeslat Feedback!");
-        $form->onSuccess[] = array($this, "feedbackSuccess");
-        $form->onValidate[] = array($this, "feedbackValidate");
+        //finalize early feedback update after goods received
+        if (isset($sess->FEedit)){
+            $fdb = $this->orders->getFeedback($orderid);           
+            $form = $this->fFactory->create($sess->FEedit, $fdb);
+            $form->addSubmit("upravit", "Upravit Feedback!");
+        }
         
+        //feedback after escrow order has been finalized
+        if (isset($sess->escrow)){
+            $form = $this->fFactory->create();
+            $form->addSubmit("odeslat", "Odeslat Feedback!");
+        }
+       
         return $form;
     }
     
-    public function feedbackValidate($form){
-        $values = $form->getValues(TRUE);
-      
-        if (!key_exists($values["type"], $this->feedbackType)){
-            $form->addError("Detekovány úpravy formuláře na straně klienta! [Radio]");
-        }
-     
-        $index = array("postage", "stealth", "quality");
-        
-        foreach($index as $i){
-            
-            if (!key_exists($values[$i], $this->feedbackMarks)){
-                $form->addError("Detekovány úpravy formuláře na straně klienta! [Select]");
-            }
-        }
-    }
-    
-    public function feedbackSuccess($form){
-        $values = $form->getValues(TRUE);
-          
-        if ($values["feedback_text"] == ""){
-            $values["feedback_text"] = "Uživatel nezanechal žádný komentář";
-        }
-        
-        $orderId = $this->hlp->sess("order")->orderid;
-  
-        $values["order_id"] = $orderId;
-        $values["listing_id"] = $this->orders->getOrderDetails($orderId)["listing_id"];
-        $values["buyer"] = $this->hlp->logn();
-
-        $this->orders->saveFeedback($values);
-        $this->flashMessage("Feedback úspěšně uložen");
-        $this->redirect("Orders:in");
+    /**
+     * Destructs session settings set in actionFeedback
+     */
+    public function __destruct(){
+        $this->hlp->sess("feedback")->remove();
     }
 }

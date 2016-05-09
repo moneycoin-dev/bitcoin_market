@@ -1,9 +1,17 @@
+Datum objednávky: {$orderInfo->date_ordered }
+<br>
+Jméno produktu: {$orderInfo->product_name }
+<br>
+Objednané množství: {$orderInfo->quantity }
+<br>
+Status: {$orderInfo->status }
+<br>
 
-{$orderInfo->date_ordered }
-{$orderInfo->product_name }
-{$orderInfo->buyer }
-{$orderInfo->quantity }
-{$orderInfo->status }
+{dump $orderInfo}
+
+{if $fdbk}
+    <a n:href="Orders:Feedback (expand) array($orderInfo->order_id, 1) ">Změnit Finalize Early Feedback </a>
+{/if}
 
 {control finalizeForm}
 {control partialReleaseForm}

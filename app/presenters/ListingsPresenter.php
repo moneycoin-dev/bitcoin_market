@@ -126,7 +126,7 @@ class ListingsPresenter extends ProtectedPresenter {
             $values = $form->getValues(True);
             $postage = $this->lHelp->returnPostageArray($values);
             $procValues = $this->lHelp->getProcValues($values);         
-            $listingID = $this->listings->createListing($procValues);
+            $listingID = $this->listings->create($procValues);
             
             if (!empty($postage['options'])){
                 $this->listings->writeListingPostageOptions($listingID, $postage);
@@ -192,7 +192,7 @@ class ListingsPresenter extends ProtectedPresenter {
     }
 
     public function handleDeleteListing($id){
-        $this->listings->deleteListing($id);
+        $this->listings->delete($id);
     }
     
     public function handleDeletePostage($option, $id = NULL, $name = NULL){
@@ -249,7 +249,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $login = $this->hlp->logn();
         
         if ($this->listings->isListingAuthor($id, $login)){
-            $this->listings->disableListing($id);
+            $this->listings->disable($id);
             $this->redirect("Listings:in");
         } else {
             $this->redirect("Listings:in");
@@ -263,7 +263,7 @@ class ListingsPresenter extends ProtectedPresenter {
         if ($this->listings->isListingAuthor($id, $login)){
             
             if (!empty($this->listings->getPostageOptions($id))){
-                $this->listings->enableListing($id);
+                $this->listings->enable($id);
             } else {
                 $this->flashMessage("Prosím přidejte poštovní možnosti před zveřejněním Vašeho listingu.");
             }
@@ -277,8 +277,8 @@ class ListingsPresenter extends ProtectedPresenter {
         $listingID = $this->hlp->sess("listing")->listingID;
         
         //query database for listing type
-        $FE = $this->listings->isListingFE($listingID);
-        $MS = $this->listings->isListingMultisig($listingID);
+        $FE = $this->listings->isFE($listingID);
+        $MS = $this->listings->isMultisig($listingID);
         
         //checkbox value rendering logic
         $checkVal = array();
@@ -428,7 +428,7 @@ class ListingsPresenter extends ProtectedPresenter {
         else {
             //in case that listing is not currently active
             //redirect potentional viewer to his dashboard
-            if ($this->listings->isListingActive($id)){
+            if ($this->listings->isActive($id)){
                 $this->lHelp->setListingSession($id);
                 $session = $this->hlp->sess("images");
                 $session->listingImages = $this->listings->getListingImages($id);
@@ -461,7 +461,7 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         else {
-            if ($this->listings->isListingActive($id)){
+            if ($this->listings->isActive($id)){
                 
                 //prevent buying from myself scenario
                 
@@ -503,11 +503,11 @@ class ListingsPresenter extends ProtectedPresenter {
         $date = date("j. n. Y"); 
         $buyer = $this->hlp->logn();
         $price = $session->finalPriceBTC; 
-        $isFE = $this->listings->isListingFE($listingID);
+        $isFE = TRUE;//$this->listings->isListingFE($listingID);
                 
         //save order to DB and do BTC transactions
         //only if balance is sufficient
-        if ($this->wallet->balanceCheck($buyer, $price)){
+       // if ($this->wallet->balanceCheck($buyer, $price)){
             
             $arguments  = array ("author" => $author, "listing_id" => $listingID, 
             "product_name" => $productName, "date_ordered" => $date,
@@ -516,7 +516,7 @@ class ListingsPresenter extends ProtectedPresenter {
             "FE" => $isFE ? "yes" : "no");
 
             //and write new order to database
-            $order_id = $this->orders->writeOrderToDb($arguments);
+            $order_id = $this->orders->saveToDB($arguments);
 
             //value that seller will receive and market profit
             $commisioned = $this->converter->getCommisioned($price);
@@ -528,22 +528,24 @@ class ListingsPresenter extends ProtectedPresenter {
             $wallet->moveAndStore("saveprofit", $buyer, "profit", $marketProfit, $order_id);
         
             //move funds and store trasactions into db
-            if(!$isFE){                 
+            if(!$isFE){        
                 $wallet->moveAndStore("pay", $buyer, "escrow", $commisioned, $order_id, "yes");
+                $this->flashMessage("Operace proběhla úspěšně. Platba je bezpečně uložena v Escrow."); 
+                $this->redirect('Orders:in');
             } else { 
+                
+                //FE - immediately transfer funds and redirect user to feedback
+                $this->orders->finalize($order_id);
                 $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "no");
+                $this->flashMessage("Finalize Early - Platba převedena na vendorův účet.");
+                $this->flashMessage("Zanechte feedback - Můžete později změnit ve Vašich objednávkách.");
+                $this->redirect("Orders:Feedback", $order_id, $isFE);
             }
-            
-            $this->flashMessage("Operace proběhla úspěšně."); 
-            
+        /*    
         } else {
             $this->flashMessage("Něco se pokazilo. Prosím kontaktujte administrátora.");
-        }
-        
-        //redirect user to his order list 
-        //after item succesfully bought
-        
-        $this->redirect('Orders:in');
+            $this->redirect("Orders:in");
+        } */
     }
     
     public function vendorNotesValidate($form){
@@ -561,7 +563,7 @@ class ListingsPresenter extends ProtectedPresenter {
     public function handleSetMainImage($imgNum){
         
         $listingID = $this->hlp->sess("listing")->listingID;     
-        $this->listings->setListingMainImage($listingID, $imgNum);
+        $this->listings->setMainImage($listingID, $imgNum);
     }
     
     public function createComponentBuyForm(){
@@ -632,9 +634,12 @@ class ListingsPresenter extends ProtectedPresenter {
         $converter  = $this->converter;
         $postageBTC = $converter->convertCzkToBTC($extractedPostagePrice);
         $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
+        
+        //final price calculation
         $finalPrice = $listingBTC + $postageBTC;
-        $session->finalPriceBTC = $finalPrice;
-        $session->finalPriceCZK = round($converter->getPriceInCZK($finalPrice));
+        $quantity = $form->values->quantity;
+        $session->finalPriceBTC = $finalPrice * $quantity;
+        $session->finalPriceCZK = round($converter->getPriceInCZK($finalPrice)) * $quantity;
         
        // $this->lHelp->balanceCheck($this->hlp->logn(), $finalPrice, $form);
     }
@@ -695,7 +700,7 @@ class ListingsPresenter extends ProtectedPresenter {
             unset($this->actualListingValues["id"]);
             
             if ($this->actualListingValues != $procValues){
-                $this->listings->editListing($listingID, $procValues);
+                $this->listings->edit($listingID, $procValues);
             }
             
             $this->flashMessage("Listing uspesne upraven!");

@@ -56,9 +56,6 @@ class BaseModel extends \DibiRow {
         
         //db result value checker    
         if ($q == $wanted){
-            if($q == NULL){
-                return FALSE;
-            }
             return TRUE;
         }
 

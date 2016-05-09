@@ -131,8 +131,8 @@ class SalesPresenter extends ProtectedPresenter {
             
             $id = $this->getOrderId();
             
-            $this->orders->changeOrderStatus($id, $values['status']);
-            $this->orders->writeSellerNotes($id, $values['seller_notes']);
+            $this->orders->changeStatus($id, $values['status']);
+            $this->orders->saveSellerNotes($id, $values['seller_notes']);
             
             unset($this->getSession()->getSection("orders")->orderID);
             
@@ -146,7 +146,7 @@ class SalesPresenter extends ProtectedPresenter {
        $login = $this->getUser()->getIdentity()->login;
        
        if ($this->orders->isOwner($id, $login)){     
-           if ($this->orders->getOrderStatus($id) == "pending"){
+           if ($this->orders->getStatus($id) == "pending"){
               $this->setOrderId($id); 
            } else {
                $this->redirect("Orders:in");

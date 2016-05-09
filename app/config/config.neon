@@ -20,6 +20,7 @@ session:
 
 
 services:
+        - App\Forms\FeedbackFormFactory
         - App\Forms\ListingFormFactory
         - App\Forms\VendorNotesFactory
         - App\Services\PriceConverter
