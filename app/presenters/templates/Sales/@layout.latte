@@ -1,0 +1,40 @@
+<h3>Objednávky:<h3>
+    {ifset $pending}
+        <b>Nevyřízené<b> &nbsp; <a n:href="Sales:closed"> Uzavřené</a>
+    {elseifset $closed}
+        <a n:href="Sales:in"> Nevyřízené</a> &nbsp; <b>Uzavřené<b>
+    {/ifset}
+<br><br>
+{if $orders}
+    <table border="1">
+        <th> Datum objednávky</th>
+        <th> Jméno produktu</th>
+        <th> Množství</th>
+        <th> Status</th>
+        <th></th>
+    {foreach $orders as $order}
+    <tr>
+        <td>{$order->date_ordered}</td>
+        <td>{$order->product_name}</td>
+        <td>{$order->quantity}</td>
+        <td>{$order->status}</td>
+        <td><a href="{link Sales:Process $order->order_id}">Vyřídit objednávku</a></td>
+    </tr>
+    {/foreach}
+    </table>
+    <br>
+    {for $i = 1; $i <= $totalOrders; $i++}
+        <a href="{ifset $pending}
+                    {link Sales:in $i}
+                {elseifset $closed}
+                    {link Sales:closed $i}
+        {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+    
+{else}
+    {ifset $pending}
+        Nemáte žádné nevyřízené objednávky!
+    {elseifset $closed}
+        Ještě jste neuzavřel žádný obchod!
+    {/ifset}
+{/if}

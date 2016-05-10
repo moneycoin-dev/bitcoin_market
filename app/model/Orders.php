@@ -15,21 +15,18 @@ use dibi;
 class Orders extends BaseModel {
 
     public function getOrders($login, $status ,$paginator = NULL, $sales = NULL){
-        
-       $ph = ' = %s';  
-       $string = isset($sales) ? 'author'. $ph : 'buyer' . $ph;
+  
+       $string = isset($sales) ? 'author' : 'buyer' ;
        
        if (isset($paginator)){
-           
             return dibi::select('*')->from('orders')
-                ->where($string, $login)
+                ->where(array($string => $login))
                 ->where(array('status' => $status))
                 ->limit($paginator->getLength())->offset($paginator->getOffset());
 
-       } else {
-           
+       } else { 
             return dibi::select('*')->from('orders')
-                ->where($string, $login)
+                ->where(array($string => $login))
                 ->where(array('status' => $status))->fetchAll();
        }       
     }
