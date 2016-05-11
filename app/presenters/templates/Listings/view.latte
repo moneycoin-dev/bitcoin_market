@@ -16,11 +16,15 @@ Země určení: {$listingDetails->ships_to}
     <img src="{$basePath}/{$image}" width="70" height="70">
 {/foreach}
 
-{control buyForm}
+{ifset $renderBuyForm}
+    {control buyForm}
+    {else}
+        Právě prohlížíte svůj inzerát.
+{/ifset}
 
 <h3> Feedback Section: </h3>
 
-{if $hasFeedback}
+{ifset $feedback}
     <table border="1" >
         <tr>
             <th> Uživatel </th>
@@ -37,4 +41,4 @@ Země určení: {$listingDetails->ships_to}
     </table>
 {else}
     Tento listing zatím nemá žádný feedback!
-{/if}
+{/ifset}

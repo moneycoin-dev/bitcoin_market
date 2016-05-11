@@ -203,10 +203,61 @@ class ListingsHelper extends BaseHelper {
         return $values;
     }
 
-    //stores actual listing values into session
-    public function setListingSession($id){
-        $listingDetails = $this->listings->getActualListingValues($id);
-    	$session = $this->sess("listing");
-    	$session->listingDetails = $listingDetails;
+    /**
+     * Sets listing session and performs
+     * check if user is listing author to 
+     * prevent form rendering and buying from myself.
+     * 
+     * @param int $id
+     */
+    public function sessNcheck($id){
+        $ld = $this->listings->getActualListingValues($id);
+        $la = $this->listings->getAuthor($id);
+        $render = FALSE;
+        
+        if ($this->logn() != $la){
+            $render = TRUE;
+        }
+
+        $this->sets("listing", array("listingDetails" => $ld,
+            "render" => $render));
+    }
+    
+    public function compareComponentName($name){
+        
+        //component name comparator called from template
+        //serves rendering of delete postage action link
+        if (strpos($name, "postage") !== FALSE){    
+            if (strpos($name, "add_postage") !== FALSE){
+                return FALSE;
+            }
+            return TRUE;
+            
+        } else {
+            return FALSE;
+        }
+    }
+    
+    public function arrayToWrite($toUpdate, $fromDB){
+        
+    //assemble array with new postage values and database ids to edit
+        $arrayToWrite = array();
+        $cnt = 0;
+
+        foreach($fromDB as $option){
+            if ($toUpdate['options'][$cnt] !== $option['option']){
+                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                $arrayToWrite[$cnt]['option'] = $toUpdate['options'][$cnt];
+            }
+
+            if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
+                $arrayToWrite[$cnt]['id'] = $option['postage_id'];
+                $arrayToWrite[$cnt]['price'] = $toUpdate['prices'][$cnt];
+            }
+
+            $cnt++; 
+        }
+        
+        return $arrayToWrite;
     }
 }

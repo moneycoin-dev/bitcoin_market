@@ -5,7 +5,7 @@
 {foreach $form->controls as $name => $field}
     <tr>
     <th>{label $name /}<th>
-    {if $presenter->compareComponentName($name) == TRUE }
+    {if $presenter->hlp->compareComponentName($name) == TRUE }
     <td>{input $name} &nbsp; <a n:href="deletePostage! (expand) array($postage, $listingID, $name)"> Smazat </a></td>
     {? $postage++}
     {else}

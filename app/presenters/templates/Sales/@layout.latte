@@ -10,15 +10,21 @@
         <th> Datum objednávky</th>
         <th> Jméno produktu</th>
         <th> Množství</th>
+        <th> Cena</th>
         <th> Status</th>
-        <th></th>
+        {ifset $pending}
+            <th>Akce</th>
+        {/ifset}
     {foreach $orders as $order}
     <tr>
         <td>{$order->date_ordered}</td>
         <td>{$order->product_name}</td>
         <td>{$order->quantity}</td>
+        <td>{$order->final_price}</td>
         <td>{$order->status}</td>
-        <td><a href="{link Sales:Process $order->order_id}">Vyřídit objednávku</a></td>
+        {ifset $pending}
+            <td><a href="{link Sales:Process $order->order_id}">Vyřídit objednávku</a></td>
+        {/ifset}
     </tr>
     {/foreach}
     </table>

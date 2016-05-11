@@ -147,7 +147,7 @@ class SalesPresenter extends ProtectedPresenter {
         //if it was direct page linking
         //redirect to user's desired page
         //necessary to set paginator page counter session
-        if (!$session->rdrSTOP){    
+        if ($session->rdr && !$session->rdrSTOP){    
             $rdrPage = $session->page;
             $this->redirector($origP, $rdrPage);
         }

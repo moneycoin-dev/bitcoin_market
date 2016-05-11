@@ -45,29 +45,15 @@ class ListingsPresenter extends ProtectedPresenter {
     public function injectVendorNotes(VendorNotesFactory $vendorNotes){
         $this->vendorNotes = $vendorNotes;
     }
-    
-    public function compareComponentName($name){
         
-        //component name comparator called from template
-        //serves rendering of delete postage action link
-        if (strpos($name, "postage") !== FALSE){    
-            if (strpos($name, "add_postage") !== FALSE){
-                return FALSE;
-            }
-            return TRUE;
-            
-        } else {
-            return FALSE;
-        }
-    }
-    
     public function createComponentListingForm(){
         
         $form = $this->formFactory->create();
         
         $this->lHelp->constructCheckboxList($form);  
         $form->addSubmit("submit", "Vytvořit");
-        $form->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function (){
+        $form->addSubmit("add_postage", "Přidat dopravu")->onClick[] = 
+        function (){
             
             //set up postage counter
             $session = $this->getSession()->getSection("postage");
@@ -142,7 +128,6 @@ class ListingsPresenter extends ProtectedPresenter {
         //via "create button"
         
         if (!$form["add_postage"]->submittedBy){
-
             $this->lHelp->formValidateValues($form);
             $images = $form->values['image'];
             $this->lHelp->imgUpload($images, $form);
@@ -153,8 +138,7 @@ class ListingsPresenter extends ProtectedPresenter {
         
         $login =  $this->hlp->logn();
   
-        if ($this->wallet->getBalance($login) > 1){
-         
+        if ($this->wallet->getBalance($login) > 1){     
             $this->listings->becomeVendor($login);
             $this->flashMessage("Váš účet má nyní vendor status");
             $this->redirect("Listings:in");
@@ -177,8 +161,8 @@ class ListingsPresenter extends ProtectedPresenter {
         //this code prevents showing multiple postage
         //textboxes on page reload
         if (is_null($this->request->getReferer())){
-            unset($this->hlp->sess("postage")->counter);
-            unset($this->hlp->sess("postage")->values);
+            $s = $this->hlp->sess("postage");
+            unset($s->counter, $s->values);
             $this->redirect("Listings:in");
         }     
     }
@@ -186,9 +170,8 @@ class ListingsPresenter extends ProtectedPresenter {
     public function actionIn(){
         //when user goes to Listings:in for example by backward button
         //unset all the counters, to show only correct values
-        unset($this->hlp->sess("postage")->counter);
-        unset($this->hlp->sess("postage")->counterEdit);
-        unset($this->hlp->sess("postage")->values);
+        $s = $this->hlp->sess("postage");
+        unset($s->counter, $s->counterEdit, $s->values);
     }
 
     public function handleDeleteListing($id){
@@ -256,19 +239,16 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
-    public function handleEnableListing($id){
-        
+    public function handleEnableListing($id){     
         $login = $this->hlp->logn();
         
-        if ($this->listings->isListingAuthor($id, $login)){
-            
+        if ($this->listings->isListingAuthor($id, $login)){       
             if (!empty($this->listings->getPostageOptions($id))){
                 $this->listings->enable($id);
             } else {
                 $this->flashMessage("Prosím přidejte poštovní možnosti před zveřejněním Vašeho listingu.");
             }
-        }
-        
+        } 
         $this->redirect("Listings:in");
     }
     
@@ -316,14 +296,15 @@ class ListingsPresenter extends ProtectedPresenter {
             $frm->addGroup("Postage");
         
             for ($i =0; $i<$counter; $i++){
-    
                 $frm->addText("postage" .$i. "X", "Doprava"); 
                 $frm->addText("pprice" .$i. "X", "Cena");
             }
         }
           
         $frm->addSubmit("submit", "Upravit");
-        $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = function() use($listingID) {
+        $frm->addSubmit("add_postage", "Přidat dopravu")->onClick[] = 
+                
+        function() use($listingID) {
             
             //inline onlclick handler, that counts postage options
             $session = $this->hlp->sess("postage");
@@ -341,8 +322,7 @@ class ListingsPresenter extends ProtectedPresenter {
             $this->redirect("Listings:editListing", $listingID);
         };
            
-        $this->lHelp->fillForm($frm, $values);
-                    
+        $this->lHelp->fillForm($frm, $values);                
         $frm->onSuccess[] = array($this, 'editSuccess');
         $frm->onValidate[] = array($this, 'editValidate');
         
@@ -377,6 +357,9 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->redirect("Listings:alert");       
     }
     
+    /**
+     * Handles image deletion from database
+     */
     public function handleDeleteImage(){
 
        $session = $this->hlp->sess("images");
@@ -402,11 +385,20 @@ class ListingsPresenter extends ProtectedPresenter {
        $this->redirect("Listings:editListing", $listingID);
     }
 
+    /**
+     * Handles abort link from alert template
+     */
     public function handleDeleteAbort(){
         $listingID = $this->hlp->sess("listing")->listingID;
         $this->redirect("Listings:editListing", $listingID);
     }
    
+    /**
+     * Redirects if and when user manually tinkered with URL
+     * otherwise sets listing details session for later use
+     * 
+     * @param int $id Listing id from URL
+     */
     public function actionView($id){
         
         //URL not wanted
@@ -429,15 +421,22 @@ class ListingsPresenter extends ProtectedPresenter {
             //in case that listing is not currently active
             //redirect potentional viewer to his dashboard
             if ($this->listings->isActive($id)){
-                $this->lHelp->setListingSession($id);
+                $this->lHelp->sessNcheck($id);
                 $session = $this->hlp->sess("images");
-                $session->listingImages = $this->listings->getListingImages($id);
+                $session->listingImages = $this->listings
+                                               ->getListingImages($id);
             } else {
                 $this->redirect("Dashboard:in");
             }
         }
     }
-
+    
+    /**
+     * Redirects if and when user manually tinkered with URL
+     * for particular URL
+     * 
+     * @param int $id Listing id from URL
+     */
     public function actionBuy($id){
         
         //URL not wanted
@@ -461,27 +460,17 @@ class ListingsPresenter extends ProtectedPresenter {
         }
         
         else {
-            if ($this->listings->isActive($id)){
-                
-                //prevent buying from myself scenario
-                
-                $login = $this->hlp->logn();
-                $listingAuthor = $this->listings->getAuthor($id);
-                
-                if ($login != $listingAuthor){
-                    $this->lHelp->setListingSession($id);
-                } else {
-                    $this->redirect("Listings:view", $id);
-                }
-                
-            } else {
+            if (!$this->listings->isActive($id)){
                 $this->redirect("Dashboard:in");
             }
         } 
     }
 
-    public function createComponentVendorNotesForm(){
-        
+    /**
+     * Creates vendor notes form
+     * @return Form
+     */
+    public function createComponentVendorNotesForm(){  
        $form = $this->vendorNotes->create();
        $form->onSuccess[] = array($this, 'vendorNotesSuccess');
        $form->onValidate[] = array($this, 'vendorNotesValidate');
@@ -489,46 +478,48 @@ class ListingsPresenter extends ProtectedPresenter {
        return $form;
     }
     
-    public function vendorNotesSuccess($form){
-        
+    /**
+     * Vendor Notes success callback
+     * Creates order in database, moves funds around
+     * @param Form $form
+     */
+    public function vendorNotesSuccess($form){   
         $session = $this->hlp->sess("listing");
-
-        //assemble argumets array
-        $listingID = $session->listingDetails->id;
-        $productName = $session->listingDetails['product_name'];
-        $author = $this->listings->getAuthor($listingID);
-        $quantity = $session->postageDetails['quantity'];
-        $postage = $session->postageDetails['postage'];
-        $buyerNotes = $form->getValues(TRUE)['notes'];
-        $date = date("j. n. Y"); 
+        $date_ordered = date("j. n. Y"); 
         $buyer = $this->hlp->logn();
-        $price = $session->finalPriceBTC; 
-        $isFE = TRUE;//$this->listings->isListingFE($listingID);
-                
+        $status = "pending";
+        $buyer_notes = $form->getValues(TRUE)['notes'];
+        $final_price = $session->finalPriceBTC; 
+        $quantity = $session->postageDetails['quantity'];
+        $postage = $session->postageDetails['postage'];    
+        $product_name = $session->listingDetails['product_name'];
+        $listing_id = $session->listingDetails->id;
+        $author = $this->listings->getAuthor($listing_id);
+        $FE = TRUE; //$this->listings->isListingFE($listingID) ? "yes" : "no";
+        
         //save order to DB and do BTC transactions
         //only if balance is sufficient
-       // if ($this->wallet->balanceCheck($buyer, $price)){
+        // if ($this->wallet->balanceCheck($buyer, $price)){
+        
+            //unset unneccessary vars and assemble arg array
+            //from these that remains
+            unset($form, $session);
+            $arguments = $this->orders->asArg(get_defined_vars());
             
-            $arguments  = array ("author" => $author, "listing_id" => $listingID, 
-            "product_name" => $productName, "date_ordered" => $date,
-            "quantity" => $quantity, "postage" => $postage, "buyer_notes" => $buyerNotes,
-            "buyer" => $buyer, "status" => "pending", "final_price" => $price,
-            "FE" => $isFE ? "yes" : "no");
-
             //and write new order to database
             $order_id = $this->orders->saveToDB($arguments);
 
             //value that seller will receive and market profit
-            $commisioned = $this->converter->getCommisioned($price);
-            $marketProfit = $this->converter->getMarketProfit($price);
-
+            $commisioned = $this->converter->getCommisioned($final_price);
+            $marketProfit = $this->converter->getMarketProfit($final_price);
             $wallet = $this->wallet;
             
             //save and transact market profit
             $wallet->moveAndStore("saveprofit", $buyer, "profit", $marketProfit, $order_id);
         
             //move funds and store trasactions into db
-            if(!$isFE){        
+            if($FE != "yes"){  
+                //escrow branch
                 $wallet->moveAndStore("pay", $buyer, "escrow", $commisioned, $order_id, "yes");
                 $this->flashMessage("Operace proběhla úspěšně. Platba je bezpečně uložena v Escrow."); 
                 $this->redirect('Orders:in');
@@ -548,6 +539,10 @@ class ListingsPresenter extends ProtectedPresenter {
         } */
     }
     
+    /**
+     * Vendor notes form validation callback
+     * @param Form $form
+     */
     public function vendorNotesValidate($form){
         
         if ($form['zrusit']->submittedBy) {
@@ -560,19 +555,26 @@ class ListingsPresenter extends ProtectedPresenter {
         //TODO
     }
     
-    public function handleSetMainImage($imgNum){
-        
+    /**
+     * Sets Listing main image to display
+     * @param int $imgNum img number from template
+     */
+    public function handleSetMainImage($imgNum){ 
         $listingID = $this->hlp->sess("listing")->listingID;     
         $this->listings->setMainImage($listingID, $imgNum);
     }
     
-    public function createComponentBuyForm(){
-        
+    /**
+     * Creates Buy Form with rendered postage options 
+     * from database
+     * 
+     * @param Form $form
+     */
+    public function createComponentBuyForm(){ 
         $form = new Nette\Application\UI\Form;
         
         $session = $this->hlp->sess("listing");
         $listingID = $session->listingDetails->id;
-        
         $postageOptionsDB = $this->listings->getPostageOptions($listingID);
         $postageOptions = array();
         $postageIDs = array();
@@ -603,6 +605,10 @@ class ListingsPresenter extends ProtectedPresenter {
         return $form;
     }
     
+    /**
+     * Buy form success callback
+     * @param Form $form
+     */
     public function buyFormOnSuccess($form){
         $session = $this->hlp->sess("listing");
         $listingID = $session->listingDetails->id;
@@ -611,41 +617,49 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->redirect("Listings:Buy", $listingID);
     }
     
+    /**
+     * Buy form validate callback
+     * @param Form $form
+     */
     public function buyFormValidate($form){
-        
+       
         //parse selectbox value
         $postageString = str_replace(" ","",$form->values->postage);
         $extractedOption = substr($postageString, 0, strpos($postageString, "+"));
-        $extractedPostagePrice = intval(substr($postageString, strpos($postageString, "+")+1, -3));
-        
-        $session = $this->hlp->sess("listing");
-        
+        $pPriceCZK = intval(substr($postageString, strpos($postageString, "+")+1, -3));
+
+        $session = $this->hlp->sess("listing");    
         $ids = $session->postageIDs;
-        unset($this->hlp->sess("listing")->postageIDs);
-        
+        unset($session->postageIDs);
+
         //check that selectbox has not been altered
-        if (!$this->listings->verifyPostage($ids, $extractedOption, $extractedPostagePrice)){
+        if (!$this->listings->verifyPostage($ids, $extractedOption, $pPriceCZK)){
             $form->addError("Detekována modifikace hodnoty selectboxu!");
         }
-        
+
+        //get listing info
         $listingDetails = $session->listingDetails;
-                
-        //price conversions and user balance check
+        $lPriceCZK = $listingDetails->price;
+
+        //czk price conversions to BTC
         $converter  = $this->converter;
-        $postageBTC = $converter->convertCzkToBTC($extractedPostagePrice);
-        $listingBTC = $converter->convertCzkToBTC($listingDetails->price);
-        
+        $postageBTC = $converter->convertCzkToBTC($pPriceCZK);
+        $listingBTC = $converter->convertCzkToBTC($lPriceCZK);
+
         //final price calculation
-        $finalPrice = $listingBTC + $postageBTC;
         $quantity = $form->values->quantity;
-        $session->finalPriceBTC = $finalPrice * $quantity;
-        $session->finalPriceCZK = round($converter->getPriceInCZK($finalPrice)) * $quantity;
-        
-       // $this->lHelp->balanceCheck($this->hlp->logn(), $finalPrice, $form);
+        $finalPriceBTC = $listingBTC + $postageBTC;
+        $finalPriceCZK = $pPriceCZK + $lPriceCZK;
+        $session->finalPriceBTC = $finalPriceBTC * $quantity;
+        $session->finalPriceCZK = $finalPriceCZK * $quantity;
+
+       // $this->lHelp->balanceCheck($this->hlp->logn(), $finalPrice, $form);   
     }
     
-    public $id;
-    
+    /**
+     * Edit form success callback
+     * @param Form $form
+     */
     public function editSuccess($form){
         
         if (!$form['add_postage']->submittedBy){
@@ -654,45 +668,24 @@ class ListingsPresenter extends ProtectedPresenter {
 
             $values = $form->getValues(TRUE);
             $procValues = $this->lHelp->getProcValues($values, "edit");
-            $listingID = $this->actualListingValues['id'];
-            $postageToUpdate = $this->lHelp->returnPostageArray($values);
-            $postageFromDB = $this->listings->getPostageOptions($listingID);
-
-            //assemble array with new postage values and database ids to edit
-            $arrayToWrite = array();
-
-            $cnt = 0;
-
-           foreach($postageFromDB as $option){
-
-                if ($postageToUpdate['options'][$cnt] !== $option['option']){
-                    $arrayToWrite[$cnt]['id'] = $option['postage_id'];
-                    $arrayToWrite[$cnt]['option'] = $postageToUpdate['options'][$cnt];
-                }
-
-                if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
-                    $arrayToWrite[$cnt]['id'] = $option['postage_id'];
-                    $arrayToWrite[$cnt]['price'] = $postageToUpdate['prices'][$cnt];
-                }
-
-                $cnt++; 
-            }
-              
-            $postageAdditional = $this->lHelp->returnPostageArray($values, TRUE);
+            $listingID = $this->actualListingValues["id"];
+            $pToUpdate = $this->lHelp->returnPostageArray($values);
+            $pFromDB = $this->listings->getPostageOptions($listingID);
+            $arrayToWrite = $this->lHelp->arrayToWrite($pToUpdate, $pFromDB);
+            $postageAdd = $this->lHelp->returnPostageArray($values, TRUE);
             
             //compare old with new values 
             //and perform neccessary db operations
-            
-            if (!empty($postageAdditional['options'])){
-                $this->listings->writeListingPostageOptions($listingID, $postageAdditional);
-            }  
+            if (!empty($postageAdd['options'])){
+                $this->listings->writeListingPostageOptions($listingID, $postageAdd);
+            }
             
             if (!empty($procValues["n_img"])){
                 $this->listings->updateListingImages($listingID, $procValues["n_img"]);  
                 unset($procValues["n_img"]);
             }
             
-            if ($postageFromDB !== $arrayToWrite){
+            if ($pFromDB !== $arrayToWrite){
                 $this->listings->updatePostageOptions($arrayToWrite);
             }
             
@@ -704,12 +697,15 @@ class ListingsPresenter extends ProtectedPresenter {
             }
             
             $this->flashMessage("Listing uspesne upraven!");
-            $this->redirect("Listings:editListing", $listingID); 
+         //   $this->redirect("Listings:editListing", $listingID); 
         }
     }
     
+    /**
+     * Edit form validation callback
+     * @param Form $form
+     */
     public function editValidate($form){
-
         if (!$form['add_postage']->submittedBy){
             $this->lHelp->formValidateValues($form);
             $images = $form->values['image'];
@@ -717,6 +713,10 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
+    /**
+     * Checks for listing values into db
+     * And renders edit listing form according to it
+     */
     public function beforeRender(){
 
         //render edit form with actual values from database
@@ -765,39 +765,48 @@ class ListingsPresenter extends ProtectedPresenter {
                         break; 
                 }
             }
-
-        } else {
-
         }
-        
-        //template variables shared between templates    
+         
         $urlPath = $this->URL->path;
      
-        if ( strpos($urlPath, "edit" )|| strpos($urlPath, "view") || strpos($urlPath, "buy")){
-            $this->template->listingImages = $this->hlp->sess("images")->listingImages;
-            $this->template->listingID = $this->hlp->sess("listing")->listingID;
-            $this->template->listingDetails = $this->hlp->sess("listing")->listingDetails;
+        //template variables shared between templates
+        if ( strpos($urlPath, "edit" )|| strpos($urlPath, "view") 
+                || strpos($urlPath, "buy")){
+            
+            $lst = $this->hlp->sess("listing");
+            $imgs = $this->hlp->sess("images");
+            $this->template->listingID = $lst->listingID;
+            $this->template->listingDetails = $lst->listingDetails;
+            $this->template->listingImages = $imgs->listingImages;
         }
     }
     
+    /**
+     * Renders Listing buy page template variables
+     */
     public function renderBuy(){
-        $this->template->finalPriceBTC = $this->hlp->sess("listing")->finalPriceBTC;
-        $this->template->finalPriceCZK = $this->hlp->sess("listing")->finalPriceCZK;
+        $lst = $this->hlp->sess("listing");
+        $this->template->finalPriceBTC = $lst->finalPriceBTC;
+        $this->template->finalPriceCZK = $lst->finalPriceCZK;
     }
     
-    public function renderView($id){
-        
-        $fdbk = $this->listings->hasFeedback($id);
-        $this->template->hasFeedback = $fdbk;
-        
-        if ($fdbk){
+    /**
+     * Renders Listing view page template variables
+     * @param int $id listing id from URL
+     */
+    public function renderView($id){    
+        if ($this->hlp->sess("listing")->render){
+            $this->template->renderBuyForm = TRUE;
+        }
+        if ($this->listings->hasFeedback($id)){
             $this->template->feedback = $this->listings->getFeedback($id);
         }
     }
     
-    public function renderIn(){
-        
-        //render variables for single template - Listings:in    
+    /**
+     *  Renders Listings entry page template variables
+     */
+    public function renderIn(){  
         $login = $this->hlp->logn();
         $this->template->isVendor = $this->listings->isVendor($login);
         $this->template->listings = $this->listings->getListings($login);    
