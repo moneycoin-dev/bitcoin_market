@@ -24,11 +24,18 @@ services:
         - App\Forms\ListingFormFactory
         - App\Forms\VendorNotesFactory
         - App\Services\PriceConverter
-        router: App\RouterFactory::createRouter
+     
         baseHelper:
             class: App\Helpers\BaseHelper
             arguments: [@application]
-            autowired: false
-        listingsHelper:
-            class: App\Helpers\ListingsHelper(@baseHelper)
             inject: yes
+        orderHelper:
+            class: App\Helpers\OrderHelper
+            inject: yes
+        listingsHelper:
+            class: App\Helpers\ListingsHelper
+            inject: yes
+
+        router: App\RouterFactory::createRouter
+           
+           

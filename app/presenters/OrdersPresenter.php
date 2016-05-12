@@ -3,9 +3,9 @@
 namespace App\Presenters;
 
 use App\Model\Listings;
+use App\Helpers\OrderHelper;
 use App\Forms\FeedbackFormFactory;
 use Nette\Application\UI\Form;
-use Nette\Utils\Paginator;
 
 /**
  * 
@@ -17,17 +17,31 @@ use Nette\Utils\Paginator;
 
 class OrdersPresenter extends ProtectedPresenter {
     
-    protected $listings, $fFactory;
+    /** @var App\Model\Listings */
+    protected $listings;
+    
+    /** @var App\Forms\FeedbackFormFactory */
+    protected $fFactory;
+    
+    /** @var App\Helpers\OrderHelper */
+    protected $oh;
 
+    //DEPENDENCY INJECTION BEGIN//
     public function injectListings(Listings $l){
         $this->listings = $l;
+    }
+    
+    public function injectOHelper(OrderHelper $oh){
+        $this->oh = $oh;
     }
     
     public function injectFeedbackForm(FeedbackFormFactory $fFactory){
         $this->fFactory = $fFactory;
     }
+    //DEPENDENCY INJECTION END//
     
-    public function isFinalized($id){
+    //HELPER FUNCTIONS BLOCK BEGIN//
+    private function isFinalized($id){
         return $this->orders->isFinalized($id);
     }
     
@@ -44,53 +58,31 @@ class OrdersPresenter extends ProtectedPresenter {
     private function shippedStatus(){
         return $this->orders->getStatus($this->getOrderId());
     }
-   
+    //HELPER FUNCTIONS BLOCK END//
+    
     /**
-     * Renders user orders and paginates results
-     * 
-     * @param int $active Paginator page for active orders
-     * @param int $closed Paginator page for closed orders
+     * Renders paginated pending orders
+     * @param int $page Paginator page number
      */
-    public function renderIn($active = 1, $closed = 1){
-        
-        $pagActive = new Paginator();
-        $pagActive->setItemsPerPage(2);
-        $pagActive->setPage($active);
-        
-        $pagClosed = new Paginator();
-        $pagClosed->setItemsPerPage(2);
-        $pagClosed->setPage($closed);
-      
-        $login = $this->hlp->logn();
-        $pendingOrders = $this->orders->getOrders($login,"pending", $pagActive);
-        $closedOrders = $this->orders->getOrders($login, "closed", $pagClosed);
-        $disputes = $this->orders->getOrders($login, "dispute");
-       
-        //set paginator itemCount after paginator was used in model
-        $pagActive->setItemCount(count($pendingOrders));
-        $pagClosed->setItemCount(count($closedOrders));
-        
-        //store page count into session
-        //doesn't render paginator on subsequent pages without this code
-        $session = $this->hlp->sess("paginator");
-        
-        if (is_null($session->totalOrders)){
-            $session->totalOrders = $pagActive->getPageCount();
-        }
-        
-        if (is_null($session->totalClosed)){
-            $session->totalClosed = $pagClosed->getPageCount();
-        }
-       
-        $this->template->disputes = $disputes;
-        $this->template->totalOrders = $session->totalOrders; 
-        $this->template->totalClosed = $session->totalClosed;
-        $this->template->active = $active;
-        $this->template->closed = $closed;
-        $this->template->pendingOrders = $pendingOrders;
-        $this->template->closedOrders = $closedOrders;
-
+    public function renderIn($page = 1){   
+        $this->oh->ordersRenderer($page, "pending");
         $this->hlp->sess("feedback")->remove();
+    }
+    
+    /**
+     * Renders paginated closed orders
+     * @param int $page Paginator page number
+     */
+    public function renderClosed($page = 1){
+        $this->oh->ordersRenderer($page, "closed");
+    }
+    
+    /**
+     * Renders paginated disputed orders
+     * @param int $page Paginator page number
+     */
+    public function renderDisputes($page = 1){
+        $this->oh->ordersRenderer($page, "dispute");
     }
     
     /**
@@ -158,8 +150,7 @@ class OrdersPresenter extends ProtectedPresenter {
                ->setValue($buyer_notes);
         
         if ($order["buyer"] == $login || $order["author"] == $login){
-            
-            
+           
             $this->template->isVendor = $this->listings->isVendor($login);
             $this->template->isFinalized = $this->orders->isFinalized($id);
             $this->template->orderInfo = $order;
@@ -170,8 +161,7 @@ class OrdersPresenter extends ProtectedPresenter {
                 if ($order["FE"] == "yes" && $this->isFbChA($id)){
                    $this->template->fdbk  = TRUE;
                 }
-            }
-            
+            }       
         } else {
             $this->redirect("Orders:in");
         }

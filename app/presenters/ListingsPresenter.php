@@ -18,10 +18,25 @@ use App\Forms\VendorNotesFactory;
 
 class ListingsPresenter extends ProtectedPresenter {
     
-    protected $listings, $formFactory,
-              $vendorNotes, $URL, $request, $lHelp;
-    
     const MAX_POSTAGE_OPTIONS = 5;
+    
+    /** @var App\Model\Listings */
+    protected $listings;
+    
+    /** @var App\Forms\ListingFormFactory */
+    protected $formFactory;
+    
+    /** @var App\Forms\VendorNotesFactory */
+    protected $vendorNotes;
+    
+    /** @var Nette\Http\Request */
+    protected $request;
+    
+    /** @var Nette\Http\URL */
+    protected $URL;
+
+    /** @var ListingsHelper */
+    public $lHelp;
   
     public function __construct(Nette\Http\Request $r){
         parent::__construct();
@@ -30,6 +45,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $this->URL = $r->getUrl();
     }
     
+    //DEPENDENCY INJECTION BEGIN//
     public function injectHelper(ListingsHelper $lh){
         $this->lHelp = $lh;
     }
@@ -45,7 +61,12 @@ class ListingsPresenter extends ProtectedPresenter {
     public function injectVendorNotes(VendorNotesFactory $vendorNotes){
         $this->vendorNotes = $vendorNotes;
     }
-        
+    //DEPENDENCY INJECTION END//
+    
+    /**
+     * Creates Form for ListingCreation
+     * @return Form
+     */
     public function createComponentListingForm(){
         
         $form = $this->formFactory->create();
@@ -100,6 +121,10 @@ class ListingsPresenter extends ProtectedPresenter {
         return $form;
     }
     
+     /**
+     * Listing creation - Form success callback
+     * @param Form $form
+     */
     public function listingCreate($form){
        
         ///do things only if submited by "create button"
@@ -122,6 +147,10 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
+    /**
+     * Listing creation - Form validation callback
+     * @param Form $form
+     */
     public function listingValidate($form){
         
         //verify form only in case it was posted
@@ -134,25 +163,24 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
-    public function handleVendor(){
-        
+    /**
+     * Checks user's balance and eventually
+     * enables him to create vendor account
+     */
+    public function handleVendor(){  
         $login =  $this->hlp->logn();
   
-        if ($this->wallet->getBalance($login) > 1){     
-            $this->listings->becomeVendor($login);
-            $this->flashMessage("Váš účet má nyní vendor status");
+        if (!$this->listings->isVendor($login)) {
+            if ($this->wallet->getBalance($login) > 1){     
+                $this->listings->becomeVendor($login);
+                $this->flashMessage("Váš účet má nyní vendor status");
+                $this->redirect("Listings:in");
+            } else {
+                $this->flashMessage('You dont have sufficient funds!');
+                $this->redirect("Listings:in");
+            } 
+        } else {
             $this->redirect("Listings:in");
-        } 
-        
-        else if ($this->listings->isVendor($login)) {
-            //if user isalready vendor
-            //redirect him in case he accidentaly visists
-            //this page
-            $this->redirect("Listings:in");
-        }
-        
-        else {
-            $this->flashMessage('You dont have sufficient funds!');
         }
     }
     
@@ -174,10 +202,23 @@ class ListingsPresenter extends ProtectedPresenter {
         unset($s->counter, $s->counterEdit, $s->values);
     }
 
+    /**
+     * Deletes user listing from database
+     * @param int $id
+     */
     public function handleDeleteListing($id){
         $this->listings->delete($id);
     }
     
+    /**
+     * Deletes postage option from database
+     * and decreases session counter of options
+     * to render exact number of fields.
+     * 
+     * @param int $option
+     * @param int $id
+     * @param string $name
+     */
     public function handleDeletePostage($option, $id = NULL, $name = NULL){
         
         //functionality shared between createListing and editListing actions
@@ -227,18 +268,29 @@ class ListingsPresenter extends ProtectedPresenter {
         }
     }
     
+    /**
+     * Disables user's listing by
+     * change of db value
+     * 
+     * @param int $id
+     */
     public function handleDisableListing($id){
         
         $login = $this->hlp->logn();
         
         if ($this->listings->isListingAuthor($id, $login)){
             $this->listings->disable($id);
-            $this->redirect("Listings:in");
-        } else {
-            $this->redirect("Listings:in");
         }
+        
+        $this->redirect("Listings:in");
     }
     
+    /**
+     * Enables user's listing by
+     * change of db value
+     * 
+     * @param int $id
+     */
     public function handleEnableListing($id){     
         $login = $this->hlp->logn();
         
@@ -246,12 +298,20 @@ class ListingsPresenter extends ProtectedPresenter {
             if (!empty($this->listings->getPostageOptions($id))){
                 $this->listings->enable($id);
             } else {
-                $this->flashMessage("Prosím přidejte poštovní možnosti před zveřejněním Vašeho listingu.");
+                $this->flashMessage("Prosím přidejte poštovní možnosti před "
+                                   ."zveřejněním Vašeho listingu.");
             }
         } 
         $this->redirect("Listings:in");
     }
     
+    /**
+     * Construct Listing-editing form based 
+     * on values from database. Has ability
+     * to add postage options.
+     * 
+     * @return Form
+     */
     public function createComponentEditForm(){
         $frm = $this->formFactory->create();
         $listingID = $this->hlp->sess("listing")->listingID;
@@ -332,17 +392,22 @@ class ListingsPresenter extends ProtectedPresenter {
     protected $actualListingValues, $listingImages,
             $listingID, $postageOptions;
     
+    /**
+     * Checks if user is author of the listing
+     * if yes sets session neccesary for editing
+     * 
+     * @param int $id listing id from URL
+     */
     public function actionEditListing($id){
         
         $login = $this->hlp->logn();
                             
-        if ($this->listings->isListingAuthor($id, $login)){
-           $this->actualListingValues = $this->listings->getActualListingValues($id);
-           $this->postageOptions = $this->listings->getPostageOptions($id);
-        } else {       
+        if (!$this->listings->isListingAuthor($id, $login)){     
            $this->redirect("Listings:in");
         }
         
+        $this->actualListingValues = $this->listings->getActualListingValues($id);
+        $this->postageOptions = $this->listings->getPostageOptions($id);
         $listingImages = $this->listings->getListingImages($id);
         $imgSession = $this->hlp->sess("images");
         $imgSession->listingImages = $listingImages;
@@ -350,6 +415,12 @@ class ListingsPresenter extends ProtectedPresenter {
         $listingSession->listingID = $id;
     }
 
+    /**
+     * Determines number of image to delete
+     * from client side click
+     * 
+     * @param int $img
+     */
     public function handleDeleteClick($img){
 
         $images = $this->hlp->sess("images");
@@ -697,7 +768,7 @@ class ListingsPresenter extends ProtectedPresenter {
             }
             
             $this->flashMessage("Listing uspesne upraven!");
-         //   $this->redirect("Listings:editListing", $listingID); 
+            $this->redirect("Listings:editListing", $listingID); 
         }
     }
     

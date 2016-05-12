@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Helpers\BaseHelper;
 use App\Model\UserManager;
 use App\Model\Listings;
 
@@ -13,16 +14,20 @@ use App\Model\Listings;
  * 
  */
 
-class ListingsHelper extends BaseHelper {
+class ListingsHelper extends \Nette\Object {
 
-    protected $listings, $userManager;
+    protected $listings, $userManager, $base;
+    
+    public function injectBase(BaseHelper $bh){
+        $this->base = $bh;
+    }
 
     public function injectListings(Listings $ls){
-            $this->listings = $ls;
+        $this->listings = $ls;
     }
 
     public function injectUserManager(UserManager $um){
-            $this->userManager = $um;
+        $this->userManager = $um;
     }
 
     public function imgUpload($images, $form){
@@ -31,7 +36,7 @@ class ListingsHelper extends BaseHelper {
         
             if ($image->isOk() && $image->isImage()){
                 $filesPath = getcwd() . "/userfiles/" ;
-                $username = $this->logn();
+                $username = $this->base->logn();
                 $userPath = $filesPath . $username;
 
                 //get extension for randomized filename
@@ -126,7 +131,7 @@ class ListingsHelper extends BaseHelper {
     public function constructCheckboxList($form){
         $listingOptions = array("ms" => "Multisig");
 
-        if($this->userManager->hasFEallowed($this->logn())){
+        if($this->userManager->hasFEallowed($this->base->logn())){
             $listingOptions["fe"] = "Finalize Early";
         }
         
@@ -147,7 +152,7 @@ class ListingsHelper extends BaseHelper {
     public function getProcValues($values, $type = NULL){
         ///performs value processing to later save in db///  
         //add listing author to values
-        $values['author'] = $this->logn();
+        $values['author'] = $this->base->logn();
 
         //add type of listing to values according to checkboxes set
         if (in_array("ms", $values["listingOptions"])){
@@ -186,7 +191,7 @@ class ListingsHelper extends BaseHelper {
             //edit listing branch
             //do image stuff only if new images uploaded
             if (!empty($imageLocations)){
-                $listingID = $this->sess("listing")->listingID;
+                $listingID = $this->base->sess("listing")->listingID;
                 $existingImages = $this->listings->getListingImages($listingID);
                 $values["n_img"] = serialize(array_merge($imageLocations, $existingImages));
             }
@@ -215,11 +220,11 @@ class ListingsHelper extends BaseHelper {
         $la = $this->listings->getAuthor($id);
         $render = FALSE;
         
-        if ($this->logn() != $la){
+        if ($this->base->logn() != $la){
             $render = TRUE;
         }
 
-        $this->sets("listing", array("listingDetails" => $ld,
+        $this->base->sets("listing", array("listingDetails" => $ld,
             "render" => $render));
     }
     
@@ -250,7 +255,7 @@ class ListingsHelper extends BaseHelper {
                 $arrayToWrite[$cnt]['option'] = $toUpdate['options'][$cnt];
             }
 
-            if ($postageToUpdate['prices'][$cnt] !== (string) $option['price']){
+            if ($toUpdate['prices'][$cnt] !== (string) $option['price']){
                 $arrayToWrite[$cnt]['id'] = $option['postage_id'];
                 $arrayToWrite[$cnt]['price'] = $toUpdate['prices'][$cnt];
             }

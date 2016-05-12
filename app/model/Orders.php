@@ -14,20 +14,22 @@ use dibi;
 
 class Orders extends BaseModel {
 
-    public function getOrders($login, $status ,$paginator = NULL, $sales = NULL){
+    public function getOrders($login, $status ,$pager = NULL, $sales = NULL){
   
        $string = isset($sales) ? 'author' : 'buyer' ;
        
-       if (isset($paginator)){
-            return dibi::select('*')->from('orders')
+       $q = dibi::select('*')->from('orders')
                 ->where(array($string => $login))
-                ->where(array('status' => $status))
-                ->limit($paginator->getLength())->offset($paginator->getOffset());
-
+                ->where(array('status' => $status));
+              
+       if ($pager){
+           $pager->setItemCount(count($q));
+           
+           return $q->limit($pager->getLength())
+                    ->offset($pager->getOffset())
+                    ->fetchAll();       
        } else { 
-            return dibi::select('*')->from('orders')
-                ->where(array($string => $login))
-                ->where(array('status' => $status))->fetchAll();
+            return $q->fetchAll();
        }       
     }
     

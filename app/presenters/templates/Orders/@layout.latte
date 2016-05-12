@@ -1,0 +1,55 @@
+<h3>Objednávky:<h3>
+    {ifset $pending}
+        <b>Aktivní<b> &nbsp; <a n:href="Orders:closed"> Uzavřené</a> &nbsp; <a n:href="Orders:disputes"> Spory</a>
+    {elseifset $closed}
+        <a n:href="Orders:in"> Aktivní</a> &nbsp; <b>Uzavřené<b> &nbsp; <a n:href="Orders:disputes"> Spory</a>
+    {elseifset $dispute}
+        <a n:href="Orders:in"> Aktivní</a> &nbsp; <a n:href="Orders:closed"> Uzavřené</a> &nbsp; <b> Spory <b>
+    {/ifset}
+<br><br>
+{if $orders}
+    <table border="1">
+        <th> Datum objednávky</th>
+        <th> Vendor</th>
+        <th> Jméno produktu</th>
+        <th> Množství</th>
+        <th> Cena</th>
+        <th> Akce </th>
+
+    {foreach $orders as $order}
+    <tr>
+        <td>{$order->date_ordered}</td>
+        <td>{$order->author}</td>
+        <td>{$order->product_name}</td>
+        <td>{$order->quantity}</td>
+        <td>{$order->final_price}</td>
+        <td>
+            {ifset $dispute}
+                <a href="{link Orders:dispute $order->order_id}">Řešit problém</a>
+            {else}
+                <a href="{link Orders:view $order->order_id}">Zobraz</a>
+            {/ifset}
+        </td> 
+    </tr>
+    {/foreach}
+    </table>
+    <br>
+    {for $i = 1; $i <= $totalOrders; $i++}
+        <a href="{ifset $pending}
+                    {link Orders:in $i}
+                {elseifset $closed}
+                    {link Orders:closed $i}
+                {elseifset $closed}
+                    {link Orders:disputes $i}
+        {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+    
+{else}
+    {ifset $pending}
+        Nemáte žádné nevyřízené objednávky!
+    {elseifset $closed}
+        Ještě jste neuzavřel žádný obchod!
+    {elseifset $closed}
+        Nemáte žádné spory!
+    {/ifset}
+{/if}
