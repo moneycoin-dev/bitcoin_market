@@ -1,4 +1,7 @@
+{layout '../@layout.latte'}
+{block content}
 <center> Vaše btc adresa je: {$walletAddress} <br> Balance: {$balance} BTC</center>
 <br>
 
 <a n:href="newAddress!"> Vygenerovat novou BTC adresu pro tento účet </a>
+{/block}

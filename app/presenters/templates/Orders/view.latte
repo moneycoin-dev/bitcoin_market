@@ -1,3 +1,5 @@
+{layout '../@layout.latte' }
+{block content}
 Datum objednávky: {$orderInfo->date_ordered }
 <br>
 Jméno produktu: {$orderInfo->product_name }
@@ -7,12 +9,12 @@ Objednané množství: {$orderInfo->quantity }
 Status: {$orderInfo->status }
 <br>
 
-{dump $orderInfo}
-
 {if $fdbk}
     <a n:href="Orders:Feedback $orderInfo->order_id">Změnit Finalize Early Feedback </a>
 {/if}
 
 {control finalizeForm}
 {control partialReleaseForm}
+
+{/block}
 

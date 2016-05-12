@@ -1,8 +1,14 @@
+{layout '../@layout.latte' }
+
+{block content}
+
 {foreach $messages as $message}
     Autor: {$message->autor} <br>
 Text zprávy: {$message->message} <br>
 {/foreach}
 
 {control disputeComplaint}
+
+{/block}
 
 

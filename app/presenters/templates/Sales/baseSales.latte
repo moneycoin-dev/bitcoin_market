@@ -1,3 +1,5 @@
+{layout '../@layout.latte'}
+{block content}
 <h3>Objednávky:<h3>
     {ifset $pending}
         <b>Nevyřízené<b> &nbsp; <a n:href="Sales:closed"> Uzavřené</a>
@@ -44,3 +46,4 @@
         Ještě jste neuzavřel žádný obchod!
     {/ifset}
 {/if}
+{/block}

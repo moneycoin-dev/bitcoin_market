@@ -64,11 +64,7 @@ class UserManager extends Nette\Object implements Nette\Security\IAuthenticator
        $q = dibi::select("fe_allowed")->from("users")->where("login = %s", $login)
                ->fetch()["fe_allowed"];
        
-       if (isset($q)){
-           return TRUE;
-        }
-       
-       return FALSE;
+        return isset($q) ? TRUE : FALSE;
     }
     
     public function allowFE($login){

@@ -1,3 +1,5 @@
+{layout '../@layout.latte'}
+{block content}
 {form messagesForm}
 <table>
     {control $form errors}
@@ -6,5 +8,5 @@
     <td>{input $name}</td>
 </tr>
 </table>
-    
 {/form}
+{/block}

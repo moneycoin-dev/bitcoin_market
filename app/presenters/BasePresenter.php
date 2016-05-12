@@ -22,7 +22,7 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 {
 
     public $wallet, $hlp, $configuration,
-            $orders, $converter;
+            $orders, $converter, $options;
     
     public function injectBaseHelper(BaseHelper $bh){
         $this->hlp = $bh;
@@ -44,6 +44,9 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         parent::startup();
         
+        $this->options = $this->configuration->returnOptions();
+        $this->template->title = $this->options["market_name"] . "|" .$this->getName();
+        
         $ddosProtection = $this->getSession()->getSection("ddos")->protection;
         
         if (!$ddosProtection){
@@ -52,6 +55,7 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         $auth = new BTCAuth();
         $client = $auth->btcd;
-        $this->wallet = new Wallet($client);
+        $this->wallet = new Wallet($client); 
+      
     }
 }

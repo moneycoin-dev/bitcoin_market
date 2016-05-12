@@ -1,5 +1,5 @@
-
-
+{layout '../@layout.latte'}
+{block content}
 <center>
     {if count($unread)}
         <div id="msgs_new">
@@ -31,3 +31,4 @@
 <a n:href="Messages:messagesForm">Odeslat zprávu</a>
 <a n:href="Messages:sent">Odeslané zprávy</a>
 </center>
+{/block}
