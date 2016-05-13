@@ -566,7 +566,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $product_name = $session->listingDetails['product_name'];
         $listing_id = $session->listingDetails->id;
         $author = $this->listings->getAuthor($listing_id);
-        $FE = TRUE; //$this->listings->isListingFE($listingID) ? "yes" : "no";
+        $FE = "yes"; //$this->listings->isListingFE($listingID) ? "yes" : "no";
         
         //save order to DB and do BTC transactions
         //only if balance is sufficient

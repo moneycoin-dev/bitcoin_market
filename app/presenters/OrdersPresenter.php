@@ -55,9 +55,16 @@ class OrdersPresenter extends ProtectedPresenter {
         $session->orderID = $id;
     }
     
-    private function shippedStatus(){
-        return $this->orders->getStatus($this->getOrderId());
+    //template functions//
+    public function isShipd(){
+        return $this->orders->isShipped($this->getOrderId());
     }
+    
+    public function isClosed(){
+        $oid = $this->getOrderId();
+        return $this->orders->hasStatus($oid, "closed");
+    }
+    //template functions//
     //HELPER FUNCTIONS BLOCK END//
     
     /**
@@ -93,28 +100,26 @@ class OrdersPresenter extends ProtectedPresenter {
         
         $form = new Form();
         $form->addTextArea("buyer_notes", "Buyer notes:");
-        
-        if ($this->shippedStatus() == "Shipped"){
-               
-            $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
+                  
+        $form->addSubmit("dispute", "Dispute")->onClick[] = function(){
 
-                $id = $this->getOrderId();   
-                $this->orders->changeStatus($id, "dispute");
-                $this->redirect("Orders:dispute", $id);
-            };
+            $id = $this->getOrderId();   
+            $this->orders->changeStatus($id, "dispute");
+            $this->redirect("Orders:dispute", $id);
+        };
 
-            $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
-                
-                $id = $this->getOrderId();
-                $author = $this->orders->getDetails($id)["author"];
-                $escrowed = $this->wallet->getEscrowed($id);
-                $this->orders->finalize($id);
-                $this->wallet->moveFunds("escrow", $author, $escrowed);
-                $this->wallet->changeTransactionState("finished", $id);
-                $this->flashMessage("Vaše objednávka byla finalizována!");
-                $this->redirect("Orders:Feedback", $id);
-            };    
-        }    
+        $form->addSubmit("finalize", "Finalize")->onClick[] = function(){
+
+            $id = $this->getOrderId();
+            $author = $this->orders->getDetails($id)["author"];
+            $escrowed = $this->wallet->getEscrowed($id);
+            $this->orders->finalize($id);
+            $this->wallet->moveFunds("escrow", $author, $escrowed);
+            $this->wallet->changeTransactionState("finished", $id);
+            $this->flashMessage("Vaše objednávka byla finalizována!");
+            $this->redirect("Orders:Feedback", $id);
+        };    
+         
         return $form;
     }
     
@@ -124,13 +129,11 @@ class OrdersPresenter extends ProtectedPresenter {
      */
     public function createComponentPartialReleaseForm(){ 
         $form = new Form();
-        
-        if ($this->shippedStatus() == "Shipped"){
            
-            $form->addText("amount", "Částka k uvolnění:");
-            $form->addSubmit("submit", "Uvolnit");
-        }   
-         return $form;
+        $form->addText("amount", "Částka k uvolnění:");
+        $form->addSubmit("submit", "Uvolnit");
+       
+        return $form;
     }
     
     /**
@@ -154,7 +157,6 @@ class OrdersPresenter extends ProtectedPresenter {
             $this->template->isVendor = $this->listings->isVendor($login);
             $this->template->isFinalized = $this->orders->isFinalized($id);
             $this->template->orderInfo = $order;
-            $this->template->fdbk = FALSE;
             
             //if changes are 0 give option to change FE feedback 
             if($order["buyer"] == $login){
@@ -207,10 +209,10 @@ class OrdersPresenter extends ProtectedPresenter {
     public function actionDispute($id){
         
         $login = $this->hlp->logn();
-        $orderStatus = $this->orders->getStatus($id);
+        $orderStat = $this->orders->hasStatus($id, "dispute");
         $participants = $this->orders->getParticipants($id);
         
-        if ($orderStatus == "Shipped" || $orderStatus == "dispute"){
+        if ($this->isShipd() || $orderStat){
             if ($login == $participants["author"] || $login == $participants["buyer"]){
                 $this->setOrderId($id);
                 $this->template->messages =  $this->orders->getDisputeContents($id);

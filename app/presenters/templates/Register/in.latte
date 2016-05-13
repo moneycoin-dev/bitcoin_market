@@ -5,15 +5,13 @@
 <h1 n:block=title>Registrace</h1>
 
 {form registerForm}
-<table>
-    {control $form errors}
-<tr n:foreach="$form->controls as $name => $field">
-    {dump $name}
-    <th>{label $name /}<th>
-    <td>{input $name}</td>
-</tr>
-</table>
-    
+    <table>
+        {control $form errors}
+    <tr n:foreach="$form->controls as $name => $field">
+        <th>{label $name /}<th>
+        <td>{input $name}</td>
+    </tr>
+    </table> 
 {/form}
 </center>
 {/block}

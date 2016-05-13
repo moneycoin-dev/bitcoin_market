@@ -105,8 +105,18 @@ class SalesPresenter extends ProtectedPresenter {
         if ($form['submit']->submittedBy){
             
             $id = $this->getOrderId();
+                 
+            if($values["status"] == "Shipped"){
+                $this->orders->setShipped($id);
+                
+                if ($this->orders->isFe($id)){
+                    $this->orders->changeStatus($id, "closed");
+                }
+                
+            } else {
+                $this->orders->changeStatus($id, "Decline");
+            }
             
-            $this->orders->changeStatus($id, $values['status']);
             $this->orders->saveSellerNotes($id, $values['seller_notes']);
             
             unset($this->hlp->sess("orders")->orderID);
@@ -127,14 +137,13 @@ class SalesPresenter extends ProtectedPresenter {
        $login = $this->hlp->logn();
        
        if ($this->orders->isOwner($id, $login)){     
-           if ($this->orders->getStatus($id) == "pending"){
+           if ($this->orders->hasStatus($id, "pending")){
               $this->setOrderId($id); 
            } else {         
-              $this->redirect("Orders:in");
-           }
-           
+              $this->redirect("Sales:in");
+           }       
        } else {
-            $this->redirect("Orders:in");
+            $this->redirect("Sales:in");
        }    
     }
 }

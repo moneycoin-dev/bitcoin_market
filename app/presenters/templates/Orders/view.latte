@@ -6,15 +6,37 @@ Jméno produktu: {$orderInfo->product_name }
 <br>
 Objednané množství: {$orderInfo->quantity }
 <br>
-Status: {$orderInfo->status }
+Status: {if $presenter->isShipd() && !$presenter->isClosed()} 
+            Zasláno. 
+        {elseif $presenter->isShipd() && $presenter->isClosed()} 
+            Vyřízeno.
+        {else}
+            Zpracovává se...
+        {/if}
 <br>
-
-{if $fdbk}
+{ifset $fdbk}
     <a n:href="Orders:Feedback $orderInfo->order_id">Změnit Finalize Early Feedback </a>
-{/if}
+{/ifset}
 
-{control finalizeForm}
-{control partialReleaseForm}
-
+{* Rendering of forms dependent on database state
+   If order is entirely closed, renders only buyer_notes
+   Otherwise renders full forms. *}
+{if $presenter->isShipd() }
+        {form finalizeForm}
+            <table>
+                {control $form errors}
+            <tr n:foreach="$form->controls as $name => $field">
+                <th>{label $name /}<th>
+                <td>{input $name}</td>
+                {breakIf $presenter->isClosed() && $name == "buyer_notes"}
+            </tr>
+            </table> 
+        {/form}
+        
+        {if !$presenter->isClosed()}
+            {control partialReleaseForm}
+        {/if}
+    {/if}
+    
 {/block}
 
