@@ -17,6 +17,8 @@ use Nette\Application\UI\Form;
 
 class OrdersPresenter extends ProtectedPresenter {
     
+    const PART_RELEASE_PERCENT = 50;
+    
     /** @var App\Model\Listings */
     protected $listings;
     
@@ -39,7 +41,7 @@ class OrdersPresenter extends ProtectedPresenter {
         $this->fFactory = $fFactory;
     }
     //DEPENDENCY INJECTION END//
-    
+      
     //HELPER FUNCTIONS BLOCK BEGIN//
     private function isFinalized($id){
         return $this->orders->isFinalized($id);
@@ -63,6 +65,11 @@ class OrdersPresenter extends ProtectedPresenter {
     public function isClosed(){
         $oid = $this->getOrderId();
         return $this->orders->hasStatus($oid, "closed");
+    }
+    
+    public function wasReleased(){
+        $oid = $this->getOrderId();
+        return $this->wallet->wasReleased($oid);
     }
     //template functions//
     //HELPER FUNCTIONS BLOCK END//
@@ -130,10 +137,40 @@ class OrdersPresenter extends ProtectedPresenter {
     public function createComponentPartialReleaseForm(){ 
         $form = new Form();
            
-        $form->addText("amount", "Částka k uvolnění:");
+        $form->addText("percentage", "Uvolnit částku (v %)");
         $form->addSubmit("submit", "Uvolnit");
-       
+                
+        $form->onValidate[] = array($this, "releaseValidate");
+        $form->onSuccess[] = array($this, "releaseSuccess");
+        
         return $form;
+    }
+    
+    public function releaseValidate($form){
+        $pr = intval($form->values->percentage);
+        
+        if ($pr <= 0) {
+            $form->addError("Vámi zadaná hodnota nesmí být 0!");
+        }
+        
+        if ($pr > self::PART_RELEASE_PERCENT){
+            $form->addError("Maximální povolená hodnota je "
+                            .self::PART_RELEASE_PERCENT);
+        }
+    }
+    
+    public function releaseSuccess($form){
+        
+        $pr = intval($form->values->percentage);
+        $oid = $this->getOrderId();
+        $esw = $this->wallet->getEscrowed($oid);
+        $fAmmount = $this->wallet->getPercentageOfEscrowed($esw["ammount"], $pr);
+
+        $this->wallet->moveAndStore(
+                "prelease", "escrow", $esw["receiver"], $fAmmount, $oid);
+        
+        $this->flashMessage("Uvolnil jste ". $fAmmount . " BTC vendorovi.");
+        $this->redirect("Orders:view", $oid);
     }
     
     /**

@@ -61,13 +61,10 @@ class Wallet extends BaseModel
         return $this->slc("address_request_time", "users", "login", $login);
     }
        
-    public function storeTransaction($type, $ammount, $order_id, $escrow = NULL){
+    public function storeTransaction(array $args){   
+        $esc = isset($args["escrow"]) ? $args["escrow"] : FALSE ;
         
-        $vars = get_defined_vars();
-        $args = $this->asArg($vars);
-        $args["donetime"] = time();
-        
-        if ($escrow == "yes"){
+        if ($esc == "yes"){
             $args["status"] = "waiting";
         } else {
             $args["status"] = "finished";
@@ -98,15 +95,44 @@ class Wallet extends BaseModel
                 ->execute();      
     }
     
-    public function getEscrowed($oid){
-        return dibi::select("ammount")->from("transactions")
-                    ->where(array("order_id" => $oid))
-                    ->where(array("type" => "pay"))->fetch();
+    public function wasReleased($oid){
+        $q = dibi::select("id")->from("transactions")
+                   ->where(array("order_id" => $oid, "type" => "prelease"))
+                   ->fetch();
+                   
+        return $q;
     }
     
-    public function moveAndStore($type, $from, $to, $ammount, $order_id, $escrow = NULL){
-        $this->moveFunds($from, $to, $ammount);            
-        $this->storeTransaction($type, $ammount, $order_id, $escrow);
+    public function getEscrowed($oid, $rcv = NULL){  
+        $a = "ammount";
+        $string = isset($rcv) ? $a : $a . ", receiver";
+        
+        return dibi::select($string)->from("transactions")
+                    ->where(array("order_id" => $oid, "type" => "pay"))
+                    ->fetch();
+    }
+    
+    public function getPercentageOfEscrowed($escrowed, $perc){
+        return ($perc / 100) * $escrowed;
+    }
+    
+    private function saver($vars){
+        $args = $this->asArg($vars);
+        $args["donetime"] = time();
+        
+        $this->storeTransaction($args);
+    }
+    
+    public function moveAndStore($type, $origin, $receiver, $ammount, $order_id = NULL, $escrow = NULL){
+        $this->moveFunds($origin, $receiver, $ammount);         
+        $vars = get_defined_vars();
+        $this->saver($vars);
+    }
+    
+    public function sendAndStore($type, $origin, $receiver, $ammount){
+        $this->sendFunds($origin, $receiver, $ammount);        
+        $vars = get_defined_vars();
+        $this->saver($vars);
     }
     
     public function getBalance($account){      
@@ -129,7 +155,7 @@ class Wallet extends BaseModel
         return $this->command("move", func_get_args());
     }
     
-    public function sendFunds($fromAccount, $btcAddress){
+    public function sendFunds($fromAccount, $btcAddress, $ammount){
         return $this->command("sendfrom", func_get_args());
     }
 }

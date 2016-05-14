@@ -95,6 +95,10 @@ class AdministrationPresenter extends ProtectedPresenter
              ->setValue($optDB["market_name"])
              ->addRule($form::FILLED, "Jméno marketu musí být vyplněno!");
         
+        $form->addText("vendorfee", "Vendor Fee")
+             ->setValue($optDB["vendorfee"])
+             ->addRule($form::FLOAT, "V poli musí být vyplněna číselná hodnota!");
+        
         $form->addText("commision_percentage", "Market Commision")
              ->setValue($optDB["commision_percentage"])
              ->addRule($form::FLOAT, "V poli musí být vyplněna číselná hodnota!");

@@ -169,14 +169,17 @@ class ListingsPresenter extends ProtectedPresenter {
      */
     public function handleVendor(){  
         $login =  $this->hlp->logn();
+        $vStr = "vendorfee";
+        $vFee = intval($this->configuration->valueGetter($vStr));
   
         if (!$this->listings->isVendor($login)) {
-            if ($this->wallet->getBalance($login) > 1){     
+            if ($this->wallet->getBalance($login) >= $vFee){  
+                $this->wallet->moveAndStore($vStr, $login, "profit", $vFee);
                 $this->listings->becomeVendor($login);
                 $this->flashMessage("Váš účet má nyní vendor status");
                 $this->redirect("Listings:in");
             } else {
-                $this->flashMessage('You dont have sufficient funds!');
+                $this->flashMessage("You don't have sufficient funds!");
                 $this->redirect("Listings:in");
             } 
         } else {

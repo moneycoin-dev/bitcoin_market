@@ -55,6 +55,10 @@ class Settings extends BaseModel
             $this->upd("users", array('pin' => $pinnew), "id", $id);
         }
     }
+    
+    public function getPin($login){
+        return $this->slc("pin", "users", "login", $login);
+    }
 
     public function isPgpNull($id){
         $q = $this->selectById($id, "pubkey");

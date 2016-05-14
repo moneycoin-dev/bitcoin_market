@@ -21,22 +21,24 @@ Status: {if $presenter->isShipd() && !$presenter->isClosed()}
 {* Rendering of forms dependent on database state
    If order is entirely closed, renders only buyer_notes
    Otherwise renders full forms. *}
-{if $presenter->isShipd() }
-        {form finalizeForm}
-            <table>
-                {control $form errors}
-            <tr n:foreach="$form->controls as $name => $field">
-                <th>{label $name /}<th>
-                <td>{input $name}</td>
-                {breakIf $presenter->isClosed() && $name == "buyer_notes"}
-            </tr>
-            </table> 
-        {/form}
-        
+
+    {if $presenter->isShipd() }
+    {form finalizeForm}
+        <table>
+            {control $form errors}
+        <tr n:foreach="$form->controls as $name => $field">
+            <th>{label $name /}<th>
+            <td>{input $name}</td>
+            {breakIf $presenter->isClosed() && $name == "buyer_notes"}
+        </tr>
+        </table> 
+    {/form}
+    {if !$presenter->wasReleased() }
         {if !$presenter->isClosed()}
             {control partialReleaseForm}
         {/if}
     {/if}
+{/if}
     
 {/block}
 
