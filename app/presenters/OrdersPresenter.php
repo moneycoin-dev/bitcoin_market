@@ -67,6 +67,11 @@ class OrdersPresenter extends ProtectedPresenter {
         return $this->orders->hasStatus($oid, "closed");
     }
     
+    public function isDispute(){
+        $oid = $this->getOrderId();
+        return $this->orders->hasStatus($oid, "dispute");
+    }
+    
     public function wasReleased(){
         $oid = $this->getOrderId();
         return $this->wallet->wasReleased($oid);
@@ -80,6 +85,7 @@ class OrdersPresenter extends ProtectedPresenter {
      */
     public function renderIn($page = 1){   
         $this->oh->ordersRenderer($page, "pending");
+        $this->oh->totalsRenderer("pending");
         $this->hlp->sess("feedback")->remove();
     }
     
@@ -89,6 +95,7 @@ class OrdersPresenter extends ProtectedPresenter {
      */
     public function renderClosed($page = 1){
         $this->oh->ordersRenderer($page, "closed");
+        $this->oh->totalsRenderer("closed");
     }
     
     /**
@@ -97,6 +104,7 @@ class OrdersPresenter extends ProtectedPresenter {
      */
     public function renderDisputes($page = 1){
         $this->oh->ordersRenderer($page, "dispute");
+        $this->oh->totalsRenderer("dispute");
     }
     
     /**
@@ -121,7 +129,10 @@ class OrdersPresenter extends ProtectedPresenter {
             $author = $this->orders->getDetails($id)["author"];
             $escrowed = $this->wallet->getEscrowed($id);
             $this->orders->finalize($id);
-            $this->wallet->moveFunds("escrow", $author, $escrowed);
+            
+            $this->wallet->moveAndStore(
+                    "erelease", "escrow", $author, $escrowed, $id);
+            
             $this->wallet->changeTransactionState("finished", $id);
             $this->flashMessage("Vaše objednávka byla finalizována!");
             $this->redirect("Orders:Feedback", $id);
@@ -163,9 +174,11 @@ class OrdersPresenter extends ProtectedPresenter {
         
         $pr = intval($form->values->percentage);
         $oid = $this->getOrderId();
-        $esw = $this->wallet->getEscrowed($oid);
+        $esw = $this->wallet->getEscrowed($oid, TRUE);
         $fAmmount = $this->wallet->getPercentageOfEscrowed($esw["ammount"], $pr);
-
+        
+        $this->wallet->updReleased($oid, $fAmmount);   
+        
         $this->wallet->moveAndStore(
                 "prelease", "escrow", $esw["receiver"], $fAmmount, $oid);
         

@@ -58,6 +58,7 @@ class SalesPresenter extends ProtectedPresenter {
      */
     public function renderIn($page = 1){
         $this->oh->ordersRenderer($page, "pending", TRUE);
+        $this->oh->totalsRenderer("pending", TRUE);
     }
     
     /**
@@ -66,6 +67,7 @@ class SalesPresenter extends ProtectedPresenter {
      */
     public function renderClosed($page = 1){
         $this->oh->ordersRenderer($page, "closed", TRUE);
+        $this->oh->totalsRenderer("closed", TRUE);
     }
     
     /**

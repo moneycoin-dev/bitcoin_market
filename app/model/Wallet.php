@@ -74,12 +74,12 @@ class Wallet extends BaseModel
     }
     
     public function balanceCheck($acc, $finalPrice, $form = NULL){
-        
         $userBalance = $this->getBalance($acc);
         
         if (!($userBalance >= $finalPrice)){
             if (isset($form)){
-                $form->addError("Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
+                $form->addError(
+                        "Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
             }
             
             return FALSE;
@@ -90,8 +90,7 @@ class Wallet extends BaseModel
     
     public function changeTransactionState($state, $oid){
         dibi::update("transactions", array("status" => $state))
-                ->where(array("order_id" => $oid))
-                ->where(array("type" => "pay"))
+                ->where(array("order_id" => $oid, "type" => "pay"))
                 ->execute();      
     }
     
@@ -103,13 +102,27 @@ class Wallet extends BaseModel
         return $q;
     }
     
+    public function updReleased($oid, $ammount){
+        dibi::update("transactions", array("p_released" => $ammount))
+            ->where(array("order_id" => $oid, "type" => "pay"))
+            ->execute();   
+    }
+    
     public function getEscrowed($oid, $rcv = NULL){  
-        $a = "ammount";
-        $string = isset($rcv) ? $a : $a . ", receiver";
+        $a = "ammount, p_released";
+        $string = $rcv ? $a .", receiver": $a ;
         
-        return dibi::select($string)->from("transactions")
+        $q = dibi::select($string)->from("transactions")
                     ->where(array("order_id" => $oid, "type" => "pay"))
                     ->fetch();
+        
+        $q["ammount"] = $q["ammount"] - $q["p_released"]; 
+        
+        if ($rcv){
+            return $q;
+        }
+        
+        return $q["ammount"];
     }
     
     public function getPercentageOfEscrowed($escrowed, $perc){
@@ -119,7 +132,7 @@ class Wallet extends BaseModel
     private function saver($vars){
         $args = $this->asArg($vars);
         $args["donetime"] = time();
-        
+
         $this->storeTransaction($args);
     }
     

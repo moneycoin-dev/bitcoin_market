@@ -15,12 +15,11 @@ use dibi;
 class Orders extends BaseModel {
 
     public function getOrders($login, $status ,$pager = NULL, $sales = NULL){
-  
-       $string = isset($sales) ? 'author' : 'buyer' ;
+       $string = $sales ? "author" : "buyer" ;
        
-       $q = dibi::select('*')->from('orders')
+       $q = dibi::select("*")->from("orders")
                 ->where(array($string => $login))
-                ->where(array('status' => $status));
+                ->where(array("status" => $status));
               
        if ($pager){
            $pager->setItemCount(count($q));
@@ -31,6 +30,13 @@ class Orders extends BaseModel {
        } else { 
             return $q->fetchAll();
        }       
+    }
+    
+    public function getTotals($login, $status, $sales = NULL){
+        $string = $sales ? "author" : "buyer";
+        
+        return dibi::select("SUM(final_price)")->from("orders")
+                   ->where(array($string => $login))->fetch();
     }
     
     public function slcOrdrFild($field, $oid){
