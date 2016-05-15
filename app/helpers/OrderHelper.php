@@ -17,7 +17,7 @@ use App\Model\Orders;
 
 class OrderHelper extends Nette\Object {
     
-    const ITM_PER_PAGE = 4;
+
     
     /** @var App\Model\Orders */
     protected $orders;
@@ -51,19 +51,14 @@ class OrderHelper extends Nette\Object {
      */
     public function ordersRenderer($page, $type, $sales = NULL){
         //start paginator construction
-        $paginator = new Paginator();
-        $paginator->setItemsPerPage(self::ITM_PER_PAGE);
-        $paginator->setPage($page);
+        $paginator = $this->base->paginatorSetup($page, 5);
 
         //get paginated data
         $orders = $this->orders->getOrders($this->base->logn(),
                   $type, $paginator, $sales);
 
-        //finally render template variables
-        $this->base->pres()->template->$type = TRUE;
-        $this->base->pres()->template->orders = $orders; 
-        $this->base->pres()->template->totalOrders = $paginator->getPageCount();                  
-        $this->base->pres()->template->page = $page;
+        $pgcount = $paginator->getPageCount();
+        $this->base->paginatorTemplate($type, $orders, $pgcount, $page);
     }
     
     /**
@@ -76,7 +71,14 @@ class OrderHelper extends Nette\Object {
      */
     public function totalsRenderer($status, $sales = NULL){
         $login = $this->base->logn();
-        $totals = $this->orders->getTotals($login, $status, $sales);
-        $this->base->pres()->template->totals = $totals;
+        $totalsCZK = $this->orders->getTotals($login,"czk",$status,$sales);
+        $totalsBTC = $this->orders->getTotals($login,"btc",$status, $sales);
+        $totalSumCZK = $this->orders->getTotals($login,"czk",NULL,$sales);
+        $totalSumBTC = $this->orders->getTotals($login,"btc",NULL,$sales);
+        $template = $this->base->pres()->template;
+        $template->totalSumCZK = $totalSumCZK;
+        $template->totalSumBTC = $totalSumBTC;
+        $template->totalsCZK = $totalsCZK;
+        $template->totalsBTC = $totalsBTC;
     }
 }

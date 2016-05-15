@@ -16,14 +16,11 @@ use Nette\Security\Passwords;
 class Settings extends BaseModel
 {             
     public function selectById($id, $what){       
-        return $this->slc($what, "users", "id", $id);
+        return $this->slc($what, "users", array("id" => $id));
     }
 
-    public function selectByLogin($login){
-
-        return dibi::select('*')->from('users')
-                ->where('login = %s', $login)
-                ->fetch();
+    public function getUserDetails($login){
+        return $this->slc("*", "users", array("login" => $login), TRUE);
     }
 
     public function verifyOldPassword($oldpw, $id){
@@ -57,7 +54,7 @@ class Settings extends BaseModel
     }
     
     public function getPin($login){
-        return $this->slc("pin", "users", "login", $login);
+        return $this->slc("pin", "users", array("login" => $login));
     }
 
     public function isPgpNull($id){
@@ -71,6 +68,35 @@ class Settings extends BaseModel
 
     public function jabberID($jabber, $id){
         $this->upd("users", array("jabber" => $jabber), "id", $id);
+    }
+    
+    public function hasFEallowed($login){       
+        $q = $this->slc("fe_allowed", "users", array("login" => $login)); 
+        return isset($q) ? TRUE : FALSE;
+    }
+    
+    public function allowFE($login){
+        $this->upd("users", array("fe_allowed" => "yes"),
+                array("login" => $login));
+    }
+    
+    public function getRecentFb($login, $pager, $type = NULL){
+        $what = "listings.id, listings.author, feedback.listing_id,"
+               ." feedback.feedback_text, feedback.type, feedback.time";
+        
+        $q = dibi::select($what)
+                ->from("listings")
+                ->join("feedback")
+                ->on("listings.id = feedback.listing_id")
+                ->where("listings.author = %s", $login);
+        
+        $type ? $q = $q->where("feedback.type = %s", $type) : TRUE;
+        
+        $pager->setItemCount(count($q));
+        
+        return $q->limit($pager->getLength())
+                 ->offset($pager->getOffset())
+                 ->fetchAll();         
     }
 }
 

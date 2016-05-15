@@ -563,7 +563,8 @@ class ListingsPresenter extends ProtectedPresenter {
         $buyer = $this->hlp->logn();
         $status = "pending";
         $buyer_notes = $form->getValues(TRUE)['notes'];
-        $final_price = $session->finalPriceBTC; 
+        $final_price = $session->finalPriceBTC;
+        $czk_price = $session->finalPriceCZK;
         $quantity = $session->postageDetails['quantity'];
         $postage = $session->postageDetails['postage'];    
         $product_name = $session->listingDetails['product_name'];

@@ -3,7 +3,6 @@
 namespace App\Model;
 
 use Nette;
-use dibi;
 use Nette\Security\Passwords;
 
 /**
@@ -58,17 +57,5 @@ class UserManager extends Nette\Object implements Nette\Security\IAuthenticator
         $arr = $row->toArray();
         unset($arr[self::COLUMN_PASSWORD_HASH]);
         return new Nette\Security\Identity($row[self::COLUMN_ID], $row[self::COLUMN_ROLE], $arr);
-    }
-    
-    public function hasFEallowed($login){
-       $q = dibi::select("fe_allowed")->from("users")->where("login = %s", $login)
-               ->fetch()["fe_allowed"];
-       
-        return isset($q) ? TRUE : FALSE;
-    }
-    
-    public function allowFE($login){
-        dibi::update("users", array("fe_allowed" => "yes"))
-                ->where("login = %s", $login)->execute();           
     }
 }

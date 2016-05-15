@@ -33,7 +33,6 @@
     </tr>
     {/foreach}
     </table>
-    <br>
     {for $i = 1; $i <= $totalOrders; $i++}
         <a href="{ifset $pending}
                     {link Orders:in $i}
@@ -43,7 +42,35 @@
                     {link Orders:disputes $i}
         {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
     {/for}
-    
+    <br>
+    <br>
+    <div>
+        <table border="1" style="display: inline-table;">
+            <tr>
+                <th id="hdr" colspan="2">Finance
+                    {ifset $pending}v aktivních
+                    {elseifset $closed}v uzavřených
+                    {elseifset $dispute}ve sporných {/ifset}objednávkách</th>
+            </tr>
+            <tr>
+                <th headers="hdr">BTC</th> <th headers="hdr">CZK</th>
+            </tr>
+            <tr>
+                <td> {$totalsBTC} </td> <td> {$totalsCZK} </td>
+            </tr>  
+        </table>
+            &nbsp; &nbsp; &nbsp;
+        <table border="1" style="display: inline-table;">
+            <tr>
+                <th id="hdre" colspan="2"> Útraty celkem</th>
+            </tr>
+            <tr>
+                <th headers="hdre">BTC</th> <th headers="hdre">CZK</th>
+            <tr>
+                <td> {$totalSumBTC} </td> <td> {$totalSumCZK} </td>
+            </tr>
+        </table>
+    <div>
 {else}
     {ifset $pending}
         Nemáte žádné nevyřízené objednávky!

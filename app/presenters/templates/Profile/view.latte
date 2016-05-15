@@ -1,13 +1,20 @@
 {layout '../@layout.latte'}
 {block content}
 {if $userData}
-<h3> Profil uživatele {$userData->login} </h3>
-<b> Vendor: <b> {if $userData->access_level == "vendor"} Ne {else} Ano{/if}
+<h3>Profil uživatele {$userData->login}</h3>
+<b>{if $userData->access_level == "vendor"} Prodejů: ({$userData->sales })
+    {else}Nákupů: ({$userData->purchases}) {/if}</b> &nbsp;
+<b>Důvěryhodnost: ({$userData->trust}) </b>
+
+<br>
+<b> Vendor: <b> {if $userData->access_level == "vendor"}  Ano{else} Ne{/if}
 <h4> Kontakt: </h4>
-<b> Jabber: </b> {if $userData->jabber} {$userData->jabber} {else} Nevyplňen. {/if}
+<b> Jabber: </b>{if $userData->jabber} {$userData->jabber}  {else} Nevyplňen. {/if}
 <br>
 <b> Wickr: </b>
 {else}
 <font color="red">Neplatna URL - Neexistujici uzivatel.</font>
 {/if}
+    <h3> Hodnocení uživatelů: </h3>
+    
 {/block}

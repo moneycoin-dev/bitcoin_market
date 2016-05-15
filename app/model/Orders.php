@@ -32,15 +32,16 @@ class Orders extends BaseModel {
        }       
     }
     
-    public function getTotals($login, $status, $sales = NULL){
-        $string = $sales ? "author" : "buyer";
-        
-        return dibi::select("SUM(final_price)")->from("orders")
-                   ->where(array($string => $login))->fetch();
+    public function getTotals($login,$crncy,$status,$sales=NULL){
+        $type = $sales ? "author" : "buyer";
+        $what = $crncy == "czk" ? "SUM(czk_price)" : "SUM(final_price)";
+        $arg = array($type => $login);
+        $status ? $arg["status"] = $status : TRUE;
+        return $this->slc($what, "orders", $arg);
     }
     
     public function slcOrdrFild($field, $oid){
-        return $this->slc($field, "orders", "order_id", $oid);
+        return $this->slc($field, "orders", array("order_id" => $oid));
     }
     
     public function isOwner($id, $login){  
@@ -50,7 +51,7 @@ class Orders extends BaseModel {
     
     public function getParticipants($orderId){        
         return $this->slc(array("author", "buyer"), "orders", 
-                "order_id", $orderId);
+                array("order_id" => $orderId));
     }
     
     public function saveToDB(array $arguments){
@@ -91,7 +92,7 @@ class Orders extends BaseModel {
     }
     
     public function hasFeedback($id){
-        $q = $this->slc("order_id", "feedback", "order_id", $id); 
+        $q = $this->slc("order_id", "feedback", array("order_id" => $id)); 
         return isset($q);
     }
     
@@ -101,7 +102,7 @@ class Orders extends BaseModel {
     }
     
     public function getFeedback($oid){
-       return $this->slc("*", "feedback", "order_id", $oid, TRUE);
+       return $this->slc("*", "feedback", array("order_id" => $oid), TRUE);
     }
     
     public function updateFeedback($oid, $feedback){
@@ -109,16 +110,12 @@ class Orders extends BaseModel {
         $this->upd("feedback", $feedback, "order_id", $oid);
     }
     
-    public function fbInc($oid){
-        $this->upd("feedback", array("changed" => +1), "order_id", $oid);
-    }
-    
     public function getFbChanges($oid){
         return $this->slc("changed", "feedback", "order_id", $oid);
     }
     
     public function getDetails($id){
-        return $this->slc("*", "orders", "order_id", $id, TRUE)[0];
+        return $this->slc("*", "orders", array("order_id" => $id), TRUE)[0];
     }
     
     public function saveSellerNotes($id, $notes){
@@ -128,7 +125,7 @@ class Orders extends BaseModel {
     
     public function getNotesLeft($id, $seller = NULL){
         $string = isset($seller) ? 'seller_notes' : 'buyer_notes';       
-        return $this->slc($string, "orders", "order_id", $id);
+        return $this->slc($string, "orders", array("order_id" => $id));
     }
     
     public function saveDisputeContents($order,$message,$timestamp, $autor){
@@ -139,5 +136,33 @@ class Orders extends BaseModel {
     public function getDisputeContents($order){        
         return dibi::query("SELECT * FROM [disputes] WHERE `order` = %i ORDER BY "
                 . "timestamp ASC", $order);
+    }
+    
+    public function incrementor($table, $what, array $where){
+         $this->upd($table, array($what => +1), $where);
+    }
+    
+    public function usrIncrementor($what, $login){
+        $this->incrementor("users", $what, array("login" => $login));
+    }
+    
+    public function fbInc($oid){
+        $this->incrementor("feedback", "changed", array("order_id" => $oid));
+    }
+    
+    public function lvlInc($login){
+        $this->usrIncrementor("level", $login);
+    }
+    
+    public function trustInc($login){
+        $this->usrIncrementor("trust", $login);
+    }
+    
+    public function saleInc($login){
+        $this->usrIncrementor("sales", $login);
+    }
+    
+    public function purchaseInc($login){
+        $this->usrIncrementor("purchases", $login);
     }
 }

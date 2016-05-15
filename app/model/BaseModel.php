@@ -14,10 +14,18 @@ use dibi;
 
 class BaseModel extends \DibiRow {
     
-    public function slc($what, $from, $where, $by, $all = NULL){
-        
-        //db select shortcut function
-        
+    /**
+     * Dibi database select shortcut function
+     * with built in scenarios for passing multiple
+     * arguments as arrays.
+     * 
+     * @param mixed array|string $what
+     * @param string $from
+     * @param array $where
+     * @param bool $all
+     * @return DibiResult
+     */
+    public function slc($what, $from, array $where, $all = NULL){
         $whatStr = "";
         
         //multiple columns for select processing
@@ -37,40 +45,61 @@ class BaseModel extends \DibiRow {
         }
         
         if(!isset($all) && !is_array($what)){
-            return dibi::select($whatStr)->from($from)->where(array($where => $by))
+            return dibi::select($whatStr)->from($from)->where($where)
                     ->fetch()[$what];
         } 
         
         else if (isset($all) || isset($all) && is_array($what)) {    
-            return dibi::select($whatStr)->from($from)->where(array($where => $by))
+            return dibi::select($whatStr)->from($from)->where($where)
                     ->fetchAll();
         }   
         
         else if (is_array($what)){
-             return dibi::select($whatStr)->from($from)->where(array($where => $by))
+             return dibi::select($whatStr)->from($from)->where($where)
                     ->fetch();
         }
     }
-
+    
+    /**
+     * Checks if result of the query equals
+     * to our desired result.
+     * 
+     * @param mixed $q
+     * @param mixed $wanted
+     * @return boolean
+     */
     public function check($q, $wanted){
-        
         //db result value checker    
         if ($q == $wanted){
             return TRUE;
         }
-
         return FALSE;
     }
     
+    /**
+     * Dibi database update shortcut function
+     * 
+     * @param string $what
+     * @param array $news
+     * @param string $where
+     * @param string $by
+     */
     public function upd($what, $news, $where, $by){
-        
         //update query shortcut
         dibi::update($what, $news)
             ->where(array($where => $by))->execute();
     }
     
+    /**
+     * Dibi database insert shortcut function
+     * Eventually returns last insert id
+     * 
+     * @param string $where
+     * @param array $what
+     * @param bool $insId
+     * @return int
+     */
     public function ins($where, array $what, $insId = NULL){
-        
         dibi::insert($where, $what)->execute();
         
         if (isset($insId)){
@@ -78,11 +107,18 @@ class BaseModel extends \DibiRow {
         }
     }
     
+    /**
+     * Accepts output from get_defined_vars()
+     * And returns associated array in format
+     * $varname => $varvalue, significantly decreases
+     * writting needed to update or insert into db.
+     * 
+     * @param array $vars
+     * @return array
+     */
     public function asArg($vars){
-        
         //returs array of associated arguments
-        //by variable name
-        
+        //by variable name 
         $args = array();
         
         foreach($vars as $var_name => $value) {
@@ -90,7 +126,6 @@ class BaseModel extends \DibiRow {
                 $args[$var_name] = $value;
             }
         }
-        
         return $args;
     }
 }

@@ -49,7 +49,7 @@ class Wallet extends BaseModel
     }
 	
     public function getBtcAddress($login){
-        return $this->slc("btcaddress", "users", "login", $login);    
+        return $this->slc("btcaddress", "users", array("login" => $login));    
     }
     
     public function writeNewBtcAddress($newaddress ,$login, $timestamp){        
@@ -58,7 +58,7 @@ class Wallet extends BaseModel
     }
     
     public function addressLastRequest($login){      
-        return $this->slc("address_request_time", "users", "login", $login);
+        return $this->slc("address_request_time", "users", array("login" => $login));
     }
        
     public function storeTransaction(array $args){   

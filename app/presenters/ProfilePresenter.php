@@ -34,7 +34,7 @@ class ProfilePresenter extends ProtectedPresenter {
       }
    
       //$id variable-name due to nette defaults
-      $this->userData = $this->settings->selectByLogin($id);
+      $this->userData = $this->settings->getUserDetails($id)[0];
     }
     
     public function beforeRender() {
@@ -42,7 +42,32 @@ class ProfilePresenter extends ProtectedPresenter {
       if ($this->request->getUrl()->path == "/profile/"){
           $this->redirect("Dashboard:in");
       }
+     
       $this->template->userData = $this->userData;
+    }
+    
+    private function drawPaginator($page, $type = NULL){
+        $paginator = $this->hlp->paginatorSetup($page, 10);
+        $lgn = $this->userData->login;
+        $dbData = $this->settings->getRecentFb($lgn, $paginator, $type);
+        $pgcount = $paginator->getPageCount();
+        $this->hlp->paginatorTemplate($type, $dbData, $pgcount, $page);
+    }
+    
+    public function renderView($page = 1){
+        $this->drawPaginator($page, "all");
+    }
+    
+    public function renderPositive($page = 1){
+        $this->drawPaginator($page, "positive");
+    }
+    
+    public function renderNegative($page = 1){
+        $this->drawPaginator($page, "negative");
+    }
+    
+    public function renderNeutral($page = 1){
+        $this->drawPaginator($page, "neutral");
     }
 }
 

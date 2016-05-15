@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use Nette;
+use Nette\Utils\Paginator;
 
 /**
  * 
@@ -41,5 +42,20 @@ class BaseHelper extends Nette\Object {
             $this->pres()->getSession()->getSection($section)
                 ->$key = $value;
         }
+    }
+    
+    public function paginatorSetup($page, $items){
+        $paginator = new Paginator();
+        $paginator->setItemsPerPage($items);
+        $paginator->setPage($page);
+        
+        return $paginator;
+    }
+    
+    public function paginatorTemplate($type, $dbData, $pgcount, $page){
+        $this->pres()->template->$type = TRUE;
+        $this->pres()->template->dbData = $dbData; 
+        $this->pres()->template->pgCount = $pgcount;                  
+        $this->pres()->template->page = $page;
     }
 }

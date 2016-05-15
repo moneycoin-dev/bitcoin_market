@@ -15,19 +15,16 @@ use dibi;
 class Configuration extends BaseModel {
     
     public function isMarketInMaintenanceMode(){
-    
         $q = $this->valueGetter("maitenance");
         return $this->check($q, "on");
     }
     
     public function isDosProtectionEnabled(){
-        
         $q = $this->valueGetter("dos_protection");
         return $this->check($q, "on");
     }
 
     public function areWithdrawalsEnabled(){
-
         $q = $this->valueGetter("withdrawals");
         return $this->check($q, "on");
     }
@@ -37,7 +34,7 @@ class Configuration extends BaseModel {
     }
     
     public function valueGetter($option){
-        return $this->slc("value", "config", "option", $option);
+        return $this->slc("value", "config", array("option" => $option));
     }
     
     public function returnOptions(){
