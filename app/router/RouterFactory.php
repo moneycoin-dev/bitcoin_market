@@ -26,7 +26,7 @@ class RouterFactory
             $router[] = new Route('login', 'Login:in');
             $router[] = new Route('listings', 'Listings:in');
             $router[] = new Route('<presenter>/<action>/<id>', 'Listings:EditListing');
-            $router[] = new Route('<presenter>/<action>/<id>', 'Profile:View');
+            $router[] = new Route('<presenter>/<action>/<id>/[<feedback>]', 'Profile:view');
             $router[] = new Route('<presenter>/<action>/<id>', 'Listings:View');
             $router[] = new Route('<presenter>/<action>/<id>', 'Listings:Buy');
             $router[] = new Route('<presenter>/<action>/<id>', 'Orders:Feedback');

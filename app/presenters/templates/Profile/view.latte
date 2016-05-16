@@ -1,5 +1,3 @@
-{layout '../@layout.latte'}
-{block content}
 {if $userData}
 <h3>Profil uživatele {$userData->login}</h3>
 <b>{if $userData->access_level == "vendor"} Prodejů: ({$userData->sales })
@@ -15,6 +13,69 @@
 {else}
 <font color="red">Neplatna URL - Neexistujici uzivatel.</font>
 {/if}
-    <h3> Hodnocení uživatelů: </h3>
+    <br><br>
+{if $dbData}
+    <h3> Hodnocení uživatele: </h3> 
+    {var $p = "positive"}
+    {var $n = "neutral"}
+    {var $ng = "negative"}
     
-{/block}
+    {ifset $all}
+        <b>Vše<b> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$p)"> Pozitivní</a> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$n)"> Neutrální</a> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$ng)"> Negativní</a>
+    {elseifset $positive}
+        <a n:href="Profile:view $acc"> Vše</a> &nbsp; 
+        <b>Pozitivní<b> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$n)"> Neutrální</a> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$ng)"> Negativní </a>
+    {elseifset $neutral}
+        <a n:href="Profile:view $acc"> Vše</a> &nbsp;  
+        <a n:href="Profile:view (expand) array($acc,NULL,$p)"> Pozitivní</a> &nbsp; 
+        <b> Neutrální </b> &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$ng)"> Negativní </a>
+    {elseifset $negative}
+        <a n:href="Profile:view $acc"> Vše</a> &nbsp;
+        <a n:href="Profile:view (expand) array($acc,NULL,$p)"> Pozitivní</a>  &nbsp; 
+        <a n:href="Profile:view (expand) array($acc,NULL,$n)"> Neutrální</a> &nbsp; 
+        <b> Negativní </b>
+    {/ifset}
+    <br><br>
+    <table border="1">
+        <th> Typ </th>
+        <th> Datum objednávky</th>
+        <th> Jméno produktu</th>
+        <th> Feedback Text</th>
+        <th> Množství </th>
+        <th> Cena</th>
+        <th> Nakupující</th>
+
+    {foreach $dbData as $order}
+        {var $details = $presenter->orders->getDetails($order->order_id)}
+    <tr>
+        <td>{$order->type}</td>
+        <td>{$order->time|date:'%d.%m.%Y'}</th>
+        <td>{$details->product_name}</td>
+        <td>{$order->feedback_text}</td>
+        <td>{$details->quantity}</td>
+        <td>{$details->final_price}</td>
+        <td>{$presenter->stripBuyerName($order->buyer)}</td>
+    </tr>
+    {/foreach}
+    </table>
+    <br>
+    {for $i = 1; $i <= $pgCount; $i++}
+        <a href="{ifset $all}
+                    {link Profile:view (expand) array($acc,$i)}
+                {elseifset $positive}
+                    {link Profile:view (expand) array($acc,$i,$p)}
+                {elseifset $neutral}
+                    {link Profile:view (expand) array($acc,$i,$n)}
+                {elseifset $negative}
+                    {link Profile:view (expand) array($acc,$i,$ng)}
+        {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}     
+{else}
+    Uživatel nemá žádný feedback.
+{/if}

@@ -82,7 +82,8 @@ class Settings extends BaseModel
     
     public function getRecentFb($login, $pager, $type = NULL){
         $what = "listings.id, listings.author, feedback.listing_id,"
-               ." feedback.feedback_text, feedback.type, feedback.time";
+               ." feedback.feedback_text, feedback.type, feedback.time,"
+               ." feedback.order_id, feedback.buyer";
         
         $q = dibi::select($what)
                 ->from("listings")
@@ -91,12 +92,12 @@ class Settings extends BaseModel
                 ->where("listings.author = %s", $login);
         
         $type ? $q = $q->where("feedback.type = %s", $type) : TRUE;
-        
+
         $pager->setItemCount(count($q));
         
         return $q->limit($pager->getLength())
                  ->offset($pager->getOffset())
-                 ->fetchAll();         
+                 ->fetchAll();     
     }
 }
 

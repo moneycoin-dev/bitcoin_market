@@ -7,7 +7,7 @@
         <a n:href="Orders:in"> Aktivní</a> &nbsp; <a n:href="Orders:closed"> Uzavřené</a> &nbsp; <b> Spory <b>
     {/ifset}
 <br><br>
-{if $orders}
+{if $dbData}
     <table border="1">
         <th> Datum objednávky</th>
         <th> Vendor</th>
@@ -16,7 +16,7 @@
         <th> Cena</th>
         <th> Akce </th>
 
-    {foreach $orders as $order}
+    {foreach $dbData as $order}
     <tr>
         <td>{$order->date_ordered}</td>
         <td>{$order->author}</td>
@@ -33,7 +33,7 @@
     </tr>
     {/foreach}
     </table>
-    {for $i = 1; $i <= $totalOrders; $i++}
+    {for $i = 1; $i <= $pgCount; $i++}
         <a href="{ifset $pending}
                     {link Orders:in $i}
                 {elseifset $closed}
