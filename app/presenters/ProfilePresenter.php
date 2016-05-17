@@ -105,7 +105,7 @@ class ProfilePresenter extends ProtectedPresenter {
       }
       
       $id = $this->id;
-      $this->template->userData = $this->settings->getUserDetails($id)[0];
+      $this->template->userData = $this->settings->getUserDetails($id);
     }
     
     /**

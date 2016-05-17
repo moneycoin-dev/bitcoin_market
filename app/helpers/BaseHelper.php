@@ -100,6 +100,7 @@ class BaseHelper extends Nette\Object {
      * @param int $page
      */
     public function paginatorTemplate($type, $dbData, $pgcount, $page){
+        $type = is_array($type) ? "multi" : $type;
         $this->pres()->template->$type = TRUE;
         $this->pres()->template->dbData = $dbData; 
         $this->pres()->template->pgCount = $pgcount;                  

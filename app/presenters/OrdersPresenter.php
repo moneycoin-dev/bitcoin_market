@@ -127,7 +127,7 @@ class OrdersPresenter extends ProtectedPresenter {
 
             $id = $this->getOrderId();
             $author = $this->orders->getDetails($id)["author"];
-            $escrowed = $this->wallet->getEscrowed($id);
+            $escrowed = $this->wallet->getEscrowed_Order($id);
             $this->orders->finalize($id);
             
             $this->wallet->moveAndStore(
@@ -174,7 +174,7 @@ class OrdersPresenter extends ProtectedPresenter {
         
         $pr = intval($form->values->percentage);
         $oid = $this->getOrderId();
-        $esw = $this->wallet->getEscrowed($oid, TRUE);
+        $esw = $this->wallet->getEscrowed_Order($oid, TRUE);
         $fAmmount = $this->wallet->getPercentageOfEscrowed($esw["ammount"], $pr);
         
         $this->wallet->updReleased($oid, $fAmmount);   

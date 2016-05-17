@@ -20,7 +20,7 @@ class Settings extends BaseModel
     }
 
     public function getUserDetails($login){
-        return $this->slc("*", "users", array("login" => $login), TRUE);
+        return $this->slc("*", "users", array("login" => $login), TRUE)[0];
     }
 
     public function verifyOldPassword($oldpw, $id){

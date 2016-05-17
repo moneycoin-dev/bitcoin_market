@@ -23,8 +23,9 @@ services:
         - App\Forms\FeedbackFormFactory
         - App\Forms\ListingFormFactory
         - App\Forms\VendorNotesFactory
-        - App\Services\PriceConverter
-     
+        converter:
+            class: App\Services\PriceConverter
+            inject: yes 
         baseHelper:
             class: App\Helpers\BaseHelper
             arguments: [@application]

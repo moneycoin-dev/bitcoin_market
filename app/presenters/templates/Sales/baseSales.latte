@@ -2,12 +2,12 @@
 {block content}
 <h3>Objednávky:<h3>
     {ifset $pending}
-        <b>Nevyřízené<b> &nbsp; <a n:href="Sales:closed"> Uzavřené</a>
-    {elseifset $closed}
-        <a n:href="Sales:in"> Nevyřízené</a> &nbsp; <b>Uzavřené<b>
+        <b>Nevyřízené<b> &nbsp; <a n:href="Sales:closed"> Odeslané / Uzavřené</a>
+    {elseifset $multi}
+        <a n:href="Sales:in"> Nevyřízené</a> &nbsp; <b>Odeslané / Uzavřené<b>
     {/ifset}
 <br><br>
-{if $orders}
+{if $dbData}
     <table border="1">
         <th> Datum objednávky</th>
         <th> Jméno produktu</th>
@@ -17,7 +17,7 @@
         {ifset $pending}
             <th>Akce</th>
         {/ifset}
-    {foreach $orders as $order}
+    {foreach $dbData as $order}
     <tr>
         <td>{$order->date_ordered}</td>
         <td>{$order->product_name}</td>
@@ -31,18 +31,49 @@
     {/foreach}
     </table>
     <br>
-    {for $i = 1; $i <= $totalOrders; $i++}
+    {for $i = 1; $i <= $pgCount; $i++}
         <a href="{ifset $pending}
                     {link Sales:in $i}
-                {elseifset $closed}
+                {elseifset $multi}
                     {link Sales:closed $i}
         {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
     {/for}
-    
+    <br><br>
+    <table border="1" style="display: inline-table;">
+        <tr>
+            <th id="header" colspan="2"> Prostředky v Escrow </th>
+        </tr>
+        <tr>
+            <th headers="header"> BTC </th>
+            <th headers="header"> CZK </th>
+        </tr>
+        <tr>
+            {var $escCZK = $presenter->wallet->getEscrowed_Vendor($user)}
+            <td>{$presenter->converter->convertCzkToBTC($escCZK)}</td>
+            <td>{$escCZK}</td>
+        </tr>
+    </table>
+    &nbsp;
+    <table border="1" style="display: inline-table;">
+        <tr>
+            <th id="header" colspan="2"> Prostředky k dispozici</th>
+        </tr>
+        <tr>
+            <th headers="header"> BTC </th>
+            <th headers="header"> CZK </th>
+        </tr>
+        <tr>
+            {var $bal = $presenter->wallet->getBalance($user)}
+            {dump $bal}
+            <td>{$presenter->converter->getPriceInCZK($bal)}</td>
+            <td>{$bal}</td>
+        </tr>
+    </table>
+           
 {else}
     {ifset $pending}
         Nemáte žádné nevyřízené objednávky!
-    {elseifset $closed}
+    {elseifset $multi}
         Ještě jste neuzavřel žádný obchod!
     {/ifset}
 {/if}

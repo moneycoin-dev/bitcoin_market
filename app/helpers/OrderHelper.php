@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use Nette;
-use Nette\Utils\Paginator;
 use App\Helpers\BaseHelper;
 use App\Model\Orders;
 
@@ -16,9 +15,7 @@ use App\Model\Orders;
  */
 
 class OrderHelper extends Nette\Object {
-    
-
-    
+        
     /** @var App\Model\Orders */
     protected $orders;
     

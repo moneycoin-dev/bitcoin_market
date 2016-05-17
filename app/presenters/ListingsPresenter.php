@@ -570,7 +570,7 @@ class ListingsPresenter extends ProtectedPresenter {
         $product_name = $session->listingDetails['product_name'];
         $listing_id = $session->listingDetails->id;
         $author = $this->listings->getAuthor($listing_id);
-        $FE = "yes"; //$this->listings->isListingFE($listingID) ? "yes" : "no";
+        $FE = "no"; //$this->listings->isListingFE($listingID) ? "yes" : "no";
         
         //save order to DB and do BTC transactions
         //only if balance is sufficient
@@ -593,13 +593,14 @@ class ListingsPresenter extends ProtectedPresenter {
             $wallet->moveAndStore("saveprofit", $buyer, "profit", $marketProfit, $order_id);
         
             //move funds and store trasactions into db
-            if($FE != "yes"){  
+            if($FE == "no"){  
                 //escrow branch
                 $wallet->moveAndStore("pay", $buyer, "escrow", $commisioned, $order_id, "yes");
                 $this->flashMessage("Operace proběhla úspěšně. Platba je bezpečně uložena v Escrow."); 
-                $this->redirect('Orders:in');
-            } else { 
-                
+             //   $this->redirect('Orders:in');
+            }
+            
+            if ($FE == "yes"){             
                 //FE - immediately transfer funds and redirect user to feedback
                 $this->orders->finalize($order_id);
                 $wallet->moveAndStore("pay", $buyer, $author, $commisioned, $order_id, "no");

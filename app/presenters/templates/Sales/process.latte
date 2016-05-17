@@ -1,4 +1,10 @@
 {layout '../@layout.latte' }
 {block content}
+<h3>Informace o objednávajícím:</h3>
+{dump $bDetails}
+Nickname: {$bDetails->login} <br>
+Uskutečnil obchodů: {$bDetails->purchases} <br>
+Důvěryhodnost: {$bDetails->trust} <br>
+<h3> Zpracovat</h3>
 {control processSaleForm}
 {/block}

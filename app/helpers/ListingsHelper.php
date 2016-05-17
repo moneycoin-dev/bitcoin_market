@@ -3,7 +3,7 @@
 namespace App\Helpers;
 
 use App\Helpers\BaseHelper;
-use App\Model\UserManager;
+use App\Model\Settings;
 use App\Model\Listings;
 
 /**
@@ -16,7 +16,7 @@ use App\Model\Listings;
 
 class ListingsHelper extends \Nette\Object {
 
-    protected $listings, $userManager, $base;
+    protected $listings, $settings, $base;
     
     public function injectBase(BaseHelper $bh){
         $this->base = $bh;
@@ -26,8 +26,8 @@ class ListingsHelper extends \Nette\Object {
         $this->listings = $ls;
     }
 
-    public function injectUserManager(UserManager $um){
-        $this->userManager = $um;
+    public function injectSettings(Settings $s){
+        $this->settings = $s;
     }
 
     public function imgUpload($images, $form){
@@ -131,7 +131,7 @@ class ListingsHelper extends \Nette\Object {
     public function constructCheckboxList($form){
         $listingOptions = array("ms" => "Multisig");
 
-        if($this->userManager->hasFEallowed($this->base->logn())){
+        if($this->settings->hasFEallowed($this->base->logn())){
             $listingOptions["fe"] = "Finalize Early";
         }
         

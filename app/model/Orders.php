@@ -14,13 +14,35 @@ use dibi;
 
 class Orders extends BaseModel {
 
+    /**
+     * Get orders or sales from database
+     * Can return combined result with different
+     * sale/order statuses
+     * 
+     * @param string $login
+     * @param mixed string|array $status
+     * @param Nette\Utils\Paginator $pager
+     * @param bool $sales
+     * @return DibiResult
+     */
     public function getOrders($login, $status ,$pager = NULL, $sales = NULL){
        $string = $sales ? "author" : "buyer" ;
        
-       $q = dibi::select("*")->from("orders")
-                ->where(array($string => $login))
-                ->where(array("status" => $status));
-              
+        $q = dibi::select("*")->from("orders")
+                ->where(array($string => $login));
+               
+        $status = is_array($status) ? $status : array($status);
+            
+        for ($i=0; $i<count($status); $i++){
+            if ($i == 0){
+                $q = $q->where(array("status" => $status[$i]));
+            } else {
+                $q = $q->or(array("status" => $status[$i]));
+            }
+        }
+        
+        $q = $q->orderBy("status DESC");
+                  
        if ($pager){
            $pager->setItemCount(count($q));
            
@@ -32,6 +54,16 @@ class Orders extends BaseModel {
        }       
     }
     
+    /**
+     * Returns total sums of user spendings
+     * or vendor sales
+     * 
+     * @param string $login
+     * @param string $crncy
+     * @param string $status
+     * @param bool $sales
+     * @return DibiResult
+     */
     public function getTotals($login,$crncy,$status,$sales=NULL){
         $type = $sales ? "author" : "buyer";
         $what = $crncy == "czk" ? "SUM(czk_price)" : "SUM(final_price)";
@@ -40,10 +72,26 @@ class Orders extends BaseModel {
         return $this->slc($what, "orders", $arg);
     }
     
+    /**
+     * Helper function for selection 
+     * result field for patricular order
+     * 
+     * @param string $field
+     * @param int $oid
+     * @return DibiResult
+     */
     public function slcOrdrFild($field, $oid){
         return $this->slc($field, "orders", array("order_id" => $oid));
     }
     
+    /**
+     * Checks if vendor is owner of
+     * the listing
+     * 
+     * @param int $id
+     * @param string $login
+     * @return bool
+     */
     public function isOwner($id, $login){  
         $q = $this->slcOrdrFild("author", $id);
         return $this->check($q, $login);

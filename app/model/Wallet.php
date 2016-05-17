@@ -18,7 +18,9 @@ class Wallet extends BaseModel
     
     public function __construct($bc){
         $this->btcClient = $bc;
+        $this->c = $c;
     }
+
     
     public function command($string, $arg = NULL, array $args = NULL){
         
@@ -108,7 +110,7 @@ class Wallet extends BaseModel
             ->execute();   
     }
     
-    public function getEscrowed($oid, $rcv = NULL){  
+    public function getEscrowed_Order($oid, $rcv = NULL){  
         $a = "ammount, p_released";
         $string = $rcv ? $a .", receiver": $a ;
         
@@ -125,6 +127,32 @@ class Wallet extends BaseModel
         return $q["ammount"];
     }
     
+    public function getEscrowed_Vendor($login){
+        $t = "transactions";
+        $o = "orders";
+        
+        $string = $o.".order_id, ".$t.".order_id, ".$t.".type, "
+                .$t.".czk_ammount, ".$t.".p_released";
+        
+        $q = dibi::select($string)
+                ->from($o)
+                ->join($t)
+                ->on($o.".order_id = ".$t.".order_id")
+                ->where($o.".author = %s", "fagan23")
+                ->where($t.".type = 'pay'")
+                ->where($t.".status = 'waiting'")
+                ->fetchAll();
+        
+        $total = 0;
+        
+        foreach($q as $record){
+            $aSub = $record["czk_ammount"] - $record["p_released"];
+            $total = $total + $aSub;
+        }
+ 
+       return $total;
+    }
+    
     public function getPercentageOfEscrowed($escrowed, $perc){
         return ($perc / 100) * $escrowed;
     }
@@ -136,10 +164,14 @@ class Wallet extends BaseModel
         $this->storeTransaction($args);
     }
     
-    public function moveAndStore($type, $origin, $receiver, $ammount, $order_id = NULL, $escrow = NULL){
+    public function moveAndStore($type, $origin, $receiver, $ammount,$order_id = NULL, $escrow = NULL)
+    {
+        //dump($this->c);
+        dump($this);
+      //  $a = $this->c->getPriceInCZK(1);
         $this->moveFunds($origin, $receiver, $ammount);         
         $vars = get_defined_vars();
-        $this->saver($vars);
+       // $this->saver($vars);
     }
     
     public function sendAndStore($type, $origin, $receiver, $ammount){

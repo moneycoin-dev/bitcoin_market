@@ -3,6 +3,7 @@
 namespace App\Presenters;
 
 use Nette\Application\UI\Form;
+use App\Model\Settings;
 use App\Helpers\OrderHelper;
 
 /**
@@ -21,6 +22,9 @@ class SalesPresenter extends ProtectedPresenter {
      */
     protected $oh;
     
+    /** @var App\Model\Settings */
+    protected $s;
+    
     /**
      * Injects helper that takes care of
      * displaying paginated Sales
@@ -29,6 +33,14 @@ class SalesPresenter extends ProtectedPresenter {
      */
     public function injectOrderHelper(OrderHelper $oh){
         $this->oh = $oh;
+    }
+    
+    /**
+     * Model dependency injection
+     * @param \App\Presenters\Settings $s
+     */
+    public function injectSettings(Settings $s){
+        $this->s = $s;
     }
         
     /**
@@ -51,6 +63,13 @@ class SalesPresenter extends ProtectedPresenter {
     private function setOrderId($id){
         $this->hlp->sets("orders", array("orderID" => $id));
     }
+    
+    /**
+     * Sets variable $user for template
+     */
+    public function beforeRender(){
+        $this->template->user = $this->hlp->logn();
+    }
    
     /**
      * Pending sales page renderer
@@ -66,7 +85,7 @@ class SalesPresenter extends ProtectedPresenter {
      * @param int $page
      */
     public function renderClosed($page = 1){
-        $this->oh->ordersRenderer($page, "closed", TRUE);
+        $this->oh->ordersRenderer($page, array("Shipped", "closed"), TRUE);
         $this->oh->totalsRenderer("closed", TRUE);
     }
     
@@ -140,7 +159,11 @@ class SalesPresenter extends ProtectedPresenter {
        
        if ($this->orders->isOwner($id, $login)){     
            if ($this->orders->hasStatus($id, "pending")){
-              $this->setOrderId($id); 
+              $this->setOrderId($id);     
+              
+              $buyer = $this->orders->getDetails($id)["buyer"];
+              $bDetails = $this->s->getUserDetails($buyer);
+              $this->template->bDetails = $bDetails;
            } else {         
               $this->redirect("Sales:in");
            }       
