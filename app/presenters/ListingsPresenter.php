@@ -583,10 +583,12 @@ class ListingsPresenter extends ProtectedPresenter {
             
             //and write new order to database
             $order_id = $this->orders->saveToDB($arguments);
+            
+            $con = $this->converter;
 
             //value that seller will receive and market profit
-            $commisioned = $this->converter->getCommisioned($final_price);
-            $marketProfit = $this->converter->getMarketProfit($final_price);
+            $commisioned = $con->getCommisioned($final_price);
+            $marketProfit = $con->getMarketProfit($final_price);
             $wallet = $this->wallet;
             
             //save and transact market profit

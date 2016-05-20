@@ -3,6 +3,8 @@
 namespace App\Model;
 
 use dibi;
+use \Nbobtc\Http\Client;
+use App\Services\PriceConverter;
 
 /**
  * 
@@ -15,13 +17,13 @@ use dibi;
 class Wallet extends BaseModel
 {
     protected $btcClient;
+    protected $cv;
     
-    public function __construct($bc){
+    public function __construct(Client $bc, PriceConverter $cv){
         $this->btcClient = $bc;
-        $this->c = $c;
+        $this->cv = $cv;
     }
 
-    
     public function command($string, $arg = NULL, array $args = NULL){
         
         //we always have at least one argument 
@@ -104,27 +106,37 @@ class Wallet extends BaseModel
         return $q;
     }
     
-    public function updReleased($oid, $ammount){
-        dibi::update("transactions", array("p_released" => $ammount))
-            ->where(array("order_id" => $oid, "type" => "pay"))
-            ->execute();   
+    private function getEscrowTotal($oid,$price){
+        $pr = $this->slc("czk_ammount", "transactions", 
+                array("order_id" => $oid, "type" => "prelease"));
+        
+        if ($pr){       
+            return $price - $pr["czk_ammount"]; 
+        }
+
+        return $price;
     }
     
     public function getEscrowed_Order($oid, $rcv = NULL){  
-        $a = "ammount, p_released";
-        $string = $rcv ? $a .", receiver": $a ;
+        $a = "transactions.czk_ammount,  transactions.order_id";
+        $string = $rcv ? $a .", orders.author": $a ;
         
-        $q = dibi::select($string)->from("transactions")
-                    ->where(array("order_id" => $oid, "type" => "pay"))
-                    ->fetch();
+        $q = dibi::select($string)->from("transactions");
+        $w = "transactions.order_id = %s AND type='pay'";
         
-        $q["ammount"] = $q["ammount"] - $q["p_released"]; 
+        $q = $rcv ? $q->join("orders")
+                      ->on("transactions.order_id = orders.order_id") 
+                      ->where($w, $oid) 
+                  : $q->where($w, $oid);
         
+        $q = $q->fetch();
+        $q["czk_ammount"] = $this->getEscrowTotal($oid, $q["czk_ammount"]);
+                
         if ($rcv){
             return $q;
         }
         
-        return $q["ammount"];
+        return $q["czk_ammount"];
     }
     
     public function getEscrowed_Vendor($login){
@@ -132,13 +144,13 @@ class Wallet extends BaseModel
         $o = "orders";
         
         $string = $o.".order_id, ".$t.".order_id, ".$t.".type, "
-                .$t.".czk_ammount, ".$t.".p_released";
+                .$t.".czk_ammount";
         
         $q = dibi::select($string)
                 ->from($o)
                 ->join($t)
                 ->on($o.".order_id = ".$t.".order_id")
-                ->where($o.".author = %s", "fagan23")
+                ->where($o.".author = %s", $login)
                 ->where($t.".type = 'pay'")
                 ->where($t.".status = 'waiting'")
                 ->fetchAll();
@@ -146,7 +158,7 @@ class Wallet extends BaseModel
         $total = 0;
         
         foreach($q as $record){
-            $aSub = $record["czk_ammount"] - $record["p_released"];
+            $aSub = $this->getEscrowTotal($record["order_id"], $record["czk_ammount"]);
             $total = $total + $aSub;
         }
  
@@ -166,12 +178,10 @@ class Wallet extends BaseModel
     
     public function moveAndStore($type, $origin, $receiver, $ammount,$order_id = NULL, $escrow = NULL)
     {
-        //dump($this->c);
-        dump($this);
-      //  $a = $this->c->getPriceInCZK(1);
-        $this->moveFunds($origin, $receiver, $ammount);         
+        $this->moveFunds($origin, $receiver, $ammount); 
+        $czk_ammount = $this->cv->getPriceInCZK($ammount);
         $vars = get_defined_vars();
-       // $this->saver($vars);
+        $this->saver($vars);
     }
     
     public function sendAndStore($type, $origin, $receiver, $ammount){

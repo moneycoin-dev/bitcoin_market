@@ -15,17 +15,16 @@ use App\Model\Wallet;
 
 class PriceConverter {
     
-    private $connection, $configuration, $wallet;
+    private $connection, $configuration;
     
     const cryptoCompareAPI = "https://www.cryptocompare.com/api/data/price?";
     const quandlFiatAPI = "https://www.quandl.com/api/v3/datasets/BOE/";     
     const quandlApiKey = "?api_key=c_eQGizpwssh1RUjy8EG"; 
     const CZK = "XUDLBK27";
     
-    public function __construct(Configuration $conf, Wallet $wal){
+    public function __construct(Configuration $conf){
         $this->connection = curl_init();
         $this->configuration = $conf;
-        $this->wallet = $wal;
     }
     
     private function request($api, $fiat, $coin = NULL){
@@ -87,10 +86,6 @@ class PriceConverter {
     
     public function getMarketProfit($price){
         return $this->getCommision($price);
-    }
-    
-    public function storeTransaction(){
-        $this->wallet->storeTransaction(); 
     }
     
     public function convertCzkToBTC($czkPrice){

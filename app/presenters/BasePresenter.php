@@ -55,7 +55,8 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         $auth = new BTCAuth();
         $client = $auth->btcd;
-        $this->wallet = new Wallet($client); 
+        $cv = new PriceConverter($this->configuration);
+        $this->wallet = new Wallet($client, $cv); 
       
     }
 }

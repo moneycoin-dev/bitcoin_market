@@ -175,15 +175,15 @@ class OrdersPresenter extends ProtectedPresenter {
         $pr = intval($form->values->percentage);
         $oid = $this->getOrderId();
         $esw = $this->wallet->getEscrowed_Order($oid, TRUE);
-        $fAmmount = $this->wallet->getPercentageOfEscrowed($esw["ammount"], $pr);
-        
-        $this->wallet->updReleased($oid, $fAmmount);   
-        
+        $ammount_czk = $this->wallet->getPercentageOfEscrowed($esw["czk_ammount"], $pr);
+        $btc_final = $this->converter->convertCzkToBTC($ammount_czk);
+         
+        //make transaction, we need btc ammount here
         $this->wallet->moveAndStore(
-                "prelease", "escrow", $esw["receiver"], $fAmmount, $oid);
+                "prelease", "escrow", $esw["author"], $btc_final, $oid);
         
-        $this->flashMessage("Uvolnil jste ". $fAmmount . " BTC vendorovi.");
-        $this->redirect("Orders:view", $oid);
+        $this->flashMessage("Uvolnil jste ". $btc_final . " BTC vendorovi.");
+       // $this->redirect("Orders:view", $oid);
     }
     
     /**
@@ -199,7 +199,7 @@ class OrdersPresenter extends ProtectedPresenter {
         $order = $this->orders->getDetails($id);
         $buyer_notes = $this->orders->getNotesLeft($id);
         
-       $this->getComponent("finalizeForm")->getComponents()["buyer_notes"]
+        $this->getComponent("finalizeForm")->getComponents()["buyer_notes"]
                ->setValue($buyer_notes);
         
         if ($order["buyer"] == $login || $order["author"] == $login){
