@@ -76,21 +76,7 @@ class ProfilePresenter extends ProtectedPresenter {
           $this->template->all = TRUE;
       }
       
-      $this->drawPaginator($page ? $page: 1, $feedback); 
-    }
-    
-    /**
-     * Strips buyer name in feedback
-     * rendering for better privacy.
-     * 
-     * @param string $name
-     * @return string
-     */
-    public function stripBuyerName($name){
-        $name = str_split($name);
-        $arr = array(current($name), end($name));
-        $str = str_repeat(".", 7);
-        return $arr[0] . $str . $arr[1];
+      $this->drawPaginator($page ? $page : 1, $feedback); 
     }
     
     /**

@@ -30,7 +30,7 @@ class Configuration extends BaseModel {
     }
 
     public function changeConfig($option, $value){
-        $this->upd("config", array("value" => $value), "option", $option);
+        $this->upd("config", array("value" => $value), array("option" => $option));
     }
     
     public function valueGetter($option){

@@ -16,14 +16,32 @@ use App\Services\PriceConverter;
 
 class Wallet extends BaseModel
 {
+    /** @var \Nbobtc\Http\Client */
     protected $btcClient;
+    
+    /** @var App\Services\PriceConverter */
     protected $cv;
     
+    /**
+     * 
+     * @param Client $bc
+     * @param PriceConverter $cv
+     */
     public function __construct(Client $bc, PriceConverter $cv){
         $this->btcClient = $bc;
         $this->cv = $cv;
     }
 
+    /**
+     * Shortcut function arround bitcoind
+     * wrapper for sending commands to the 
+     * daemon
+     * 
+     * @param string $string
+     * @param array $arg
+     * @param array $args
+     * @return array response
+     */
     public function command($string, $arg = NULL, array $args = NULL){
         
         //we always have at least one argument 
@@ -51,20 +69,48 @@ class Wallet extends BaseModel
         
         return $result['result'];
     }
-	
+    
+    /**
+     * Return bitcoin adress for
+     * associated account
+     * 
+     * @param string $login
+     * @return string
+     */
     public function getBtcAddress($login){
         return $this->slc("btcaddress", "users", array("login" => $login));    
     }
     
+    /**
+     * Updates database record of
+     * user's associated bitcoin address
+     * 
+     * @param string $newaddress
+     * @param string $login
+     * @param int $timestamp
+     */
     public function writeNewBtcAddress($newaddress ,$login, $timestamp){        
         $this->upd("users", array("btcaddress" => $newaddress, 
-            "address_request_time" => $timestamp), "login", $login);
+            "address_request_time" => $timestamp), array("login" => $login));
     }
     
+    /**
+     * Checks user's last address
+     * request time from db.
+     * 
+     * @param string $login
+     * @return int
+     */
     public function addressLastRequest($login){      
         return $this->slc("address_request_time", "users", array("login" => $login));
     }
-       
+    
+    /**
+     * Saves details of finished
+     * transaction into database
+     * 
+     * @param array $args
+     */
     public function storeTransaction(array $args){   
         $esc = isset($args["escrow"]) ? $args["escrow"] : FALSE ;
         
@@ -77,6 +123,16 @@ class Wallet extends BaseModel
         $this->ins("transactions", $args);
     }
     
+    /**
+     * Checks bitcoin account balance
+     * Eventually adds error into form
+     * if balance is not sufficient.
+     * 
+     * @param string $acc
+     * @param int $finalPrice
+     * @param Form $form
+     * @return boolean
+     */
     public function balanceCheck($acc, $finalPrice, $form = NULL){
         $userBalance = $this->getBalance($acc);
         
@@ -84,20 +140,31 @@ class Wallet extends BaseModel
             if (isset($form)){
                 $form->addError(
                         "Nemáte dostatečný počet bitcoinů pro zakoupení produktu.");
-            }
-            
+            }      
             return FALSE;
-        }
-        
+        }  
         return TRUE;
     }
     
+    /**
+     * Changes transaction state.
+     * 
+     * @param type $state
+     * @param type $oid
+     */
     public function changeTransactionState($state, $oid){
         dibi::update("transactions", array("status" => $state))
                 ->where(array("order_id" => $oid, "type" => "pay"))
                 ->execute();      
     }
     
+    /**
+     * Checks if some btc was
+     * partially released from escrow.
+     * 
+     * @param int $oid
+     * @return bool
+     */
     public function wasReleased($oid){
         $q = dibi::select("id")->from("transactions")
                    ->where(array("order_id" => $oid, "type" => "prelease"))
@@ -106,6 +173,15 @@ class Wallet extends BaseModel
         return $q;
     }
     
+    /**
+     * Check actual btcs that
+     * user has actually stored.
+     * Check for p-releases as well.
+     * 
+     * @param int $oid
+     * @param float $price
+     * @return float
+     */
     private function getEscrowTotal($oid,$price){
         $pr = $this->slc("czk_ammount", "transactions", 
                 array("order_id" => $oid, "type" => "prelease"));
@@ -117,6 +193,14 @@ class Wallet extends BaseModel
         return $price;
     }
     
+    /**
+     * Returns actual ammount in escrow
+     * for given order.
+     * 
+     * @param int $oid
+     * @param bool $rcv
+     * @return array|int
+     */
     public function getEscrowed_Order($oid, $rcv = NULL){  
         $a = "transactions.czk_ammount,  transactions.order_id";
         $string = $rcv ? $a .", orders.author": $a ;
@@ -139,6 +223,14 @@ class Wallet extends BaseModel
         return $q["czk_ammount"];
     }
     
+    /**
+     * Return total ammount for
+     * all escrowed orders for
+     * given vendor.
+     * 
+     * @param string $login
+     * @return int
+     */
     public function getEscrowed_Vendor($login){
         $t = "transactions";
         $o = "orders";
@@ -165,10 +257,21 @@ class Wallet extends BaseModel
        return $total;
     }
     
+    /**
+     * Returns % of escrowed ammount.
+     * 
+     * @param int $escrowed
+     * @param int $perc
+     * @return float
+     */
     public function getPercentageOfEscrowed($escrowed, $perc){
         return ($perc / 100) * $escrowed;
     }
     
+    /**
+     * Saves transaction data into database
+     * @param array $vars
+     */
     private function saver($vars){
         $args = $this->asArg($vars);
         $args["donetime"] = time();

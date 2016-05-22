@@ -84,10 +84,10 @@ class BaseModel extends \DibiRow {
      * @param string $where
      * @param string $by
      */
-    public function upd($what, $news, $where, $by){
+    public function upd($what, $news, $where){
         //update query shortcut
         dibi::update($what, $news)
-            ->where(array($where => $by))->execute();
+            ->where($where)->execute();
     }
     
     /**
@@ -127,5 +127,21 @@ class BaseModel extends \DibiRow {
             }
         }
         return $args;
+    }
+    
+    /**
+     * Shortcut function for fetching query
+     * with paginator.
+     * 
+     * @param Dibi\Fluent $q
+     * @param Nette\Utils\Paginator $paginator
+     * @return DibiResult
+     */
+    public function pgFetch($q, $paginator){
+        $paginator->setItemCount(count($q));
+        
+        return $q->limit($paginator->getLength())
+                 ->offset($paginator->getOffset())                
+                 ->fetchAll();   
     }
 }

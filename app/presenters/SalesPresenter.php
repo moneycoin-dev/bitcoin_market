@@ -120,7 +120,7 @@ class SalesPresenter extends ProtectedPresenter {
      * Sale processing success event
      * @param Form $form
      */
-    public function processSaleSuccess($form){
+    public function processSaleSuccess($form){                
         $values = $form->getValues(TRUE);
         
         if ($form['submit']->submittedBy){
@@ -132,6 +132,9 @@ class SalesPresenter extends ProtectedPresenter {
                 
                 if ($this->orders->isFe($id)){
                     $this->orders->changeStatus($id, "closed");
+                } else {
+                    $date = $this->orders->setAuFinalizeDate($id);
+                    $this->hlp->newCronJob("autoFinalize", $date, $id);
                 }
                 
             } else {

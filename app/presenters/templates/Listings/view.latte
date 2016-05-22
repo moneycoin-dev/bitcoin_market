@@ -29,18 +29,26 @@ Země určení: {$listingDetails->ships_to}
 {ifset $feedback}
     <table border="1" >
         <tr>
-            <th> Uživatel </th>
             <th> Druh </th>
             <th> Hodnocení </th>
+            <th> Uživatel </th>
             <th> Datum </th>
         <tr>
-    {foreach $feedback as $f}
+    {foreach $dbData as $f}
         <tr>
-            <td> {$f->buyer} </td> <td> {$f->type} </td> <td> {$f->feedback_text} </td> 
+            <td> {$f->type} </td> <td> {$f->feedback_text} </td> 
+            <td> {$presenter->hlp->stripBuyerName($f->buyer)} </td> 
             <td> {$f->time|date:'%d.%m.%Y'} </td>
         </tr>      
     {/foreach}
     </table>
+    <br>
+    {for $i = 1; $i <= $pgCount; $i++}
+        <a href="{ifset $feedback}
+                    {link Listings:view (expand) array($listingDetails->id, $i) }
+        {/ifset}">{if $i == $page}<strong>{$i}</strong>{else}{$i}{/if}</a>
+    {/for}
+    <br><br>
 {else}
     Tento listing zatím nemá žádný feedback!
 {/ifset}

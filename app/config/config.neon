@@ -18,7 +18,6 @@ application:
 session:
 	expiration: 14 days
 
-
 services:
         - App\Forms\FeedbackFormFactory
         - App\Forms\ListingFormFactory

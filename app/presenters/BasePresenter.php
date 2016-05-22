@@ -44,19 +44,22 @@ abstract class BasePresenter extends Nette\Application\UI\Presenter
 
         parent::startup();
         
+        //If script runs from console
+        //don't do redirect, it's CRON
+        if (PHP_SAPI !== "cli"){    
+            $ddosProtection = $this->getSession()->getSection("ddos")->protection;
+
+            if (!$ddosProtection){
+                 $this->redirect("Entry:in");
+            } 
+        }
+        
         $this->options = $this->configuration->returnOptions();
         $this->template->title = $this->options["market_name"] . "|" .$this->getName();
-        
-        $ddosProtection = $this->getSession()->getSection("ddos")->protection;
-        
-        if (!$ddosProtection){
-             $this->redirect("Entry:in");
-        } 
 
         $auth = new BTCAuth();
         $client = $auth->btcd;
         $cv = new PriceConverter($this->configuration);
-        $this->wallet = new Wallet($client, $cv); 
-      
+        $this->wallet = new Wallet($client, $cv);  
     }
 }

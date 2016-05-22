@@ -64,7 +64,6 @@
         </tr>
         <tr>
             {var $bal = $presenter->wallet->getBalance($user)}
-            {dump $bal}
             <td>{$presenter->converter->getPriceInCZK($bal)}</td>
             <td>{$bal}</td>
         </tr>

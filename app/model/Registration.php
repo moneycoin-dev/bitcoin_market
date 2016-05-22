@@ -21,7 +21,7 @@ class Registration extends BaseModel
     }
 
     public function assignBtcAdress($login, $address){        
-        $this->upd("users",  array('btcaddress' => $address), "login", $login);
+        $this->upd("users",  array('btcaddress' => $address), array("login" => $login));
     }
 
     public function checkIfUserExists($login){

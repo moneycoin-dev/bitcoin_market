@@ -20,7 +20,8 @@ class Listings extends BaseModel {
     }
 
     public function becomeVendor($login){        
-        $this->upd("users", array('access_level' => 'vendor'), "login", $login);
+        $this->upd("users", array('access_level' => 'vendor'), 
+                array("login" => $login));
     }
         
     public function create(array $values){
@@ -56,12 +57,12 @@ class Listings extends BaseModel {
             
             if (array_key_exists("option", $value)){                
                 $this->upd("postage",array("option" => $value["option"]),
-                        "postage_id", $value["id"]);
+                        array("postage_id" => $value["id"]));
             }
             
             if (array_key_exists("price", $value)){
                 $this->upd("postage",array("price" => $value["price"]),
-                        "postage_id", $value['id']);
+                        array("postage_id" => $value['id']));
             }   
         }
     }
@@ -93,7 +94,7 @@ class Listings extends BaseModel {
     }
     
     public function edit($id, $values){
-        return $this->upd("listings", $values, "id", $id);
+        return $this->upd("listings", $values, array("id" => $id));
     }
     
     public function delete($id){
@@ -121,11 +122,11 @@ class Listings extends BaseModel {
     }
     
     public function updateListingImages($id, $images){        
-        $this->upd("listings", array("product_images" => $images), "id", $id);
+        $this->upd("listings", array("product_images" => $images), array("id" => $id));
     }
     
     public function setMainImage($id, $imgNum){
-        $this->upd("listings", array('main_image' => $imgNum), "id", $id);
+        $this->upd("listings", array('main_image' => $imgNum), array("id" => $id));
     }
     
     public function getMainImage($id){
@@ -137,11 +138,11 @@ class Listings extends BaseModel {
     }
     
     public function enable($id){        
-        return $this->upd("listings", array('status' => 'active'), "id", $id);
+        return $this->upd("listings", array('status' => 'active'), array("id" => $id));
     }
     
     public function disable($id){       
-        return $this->upd("listings", array("status" => "disabled"), "id", $id);
+        return $this->upd("listings", array("status" => "disabled"), array("id" => $id));
     }
     
     public function isActive($id){
@@ -163,7 +164,11 @@ class Listings extends BaseModel {
         return $this->slc("listing_id", "feedback", array("listing_id" => $id)); 
     }
     
-    public function getFeedback($lid){
-        return $this->slc("*", "feedback", array("listing_id" => $lid), TRUE);
+    public function getFeedback($lid , $paginator){
+        $q = dibi::select("*")->from("feedback")
+                              ->where(array("listing_id" => $lid))
+                              ->orderBy("time DESC");
+
+        return $this->pgFetch($q, $paginator);
     }
 }

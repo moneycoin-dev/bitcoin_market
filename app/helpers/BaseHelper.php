@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Nette;
 use Nette\Utils\Paginator;
+use Nette\Utils\DateTime;
 
 /**
  * 
@@ -105,5 +106,40 @@ class BaseHelper extends Nette\Object {
         $this->pres()->template->dbData = $dbData; 
         $this->pres()->template->pgCount = $pgcount;                  
         $this->pres()->template->page = $page;
+    }
+    
+    /**
+     * Strips buyer name in feedback
+     * rendering for better privacy.
+     * 
+     * @param string $name
+     * @return string
+     */
+    public function stripBuyerName($name){
+        $name = str_split($name);
+        $arr = array(current($name), end($name));
+        $str = str_repeat(".", 7);
+        return $arr[0] . $str . $arr[1];
+    }
+    
+    /**
+     * Creates new CRON job
+     * on local system.
+     * 
+     * @param type $time
+     * @param type $func
+     */
+    public function newCronJob($func, $time, $id = NULL){
+        $index = $_SERVER['DOCUMENT_ROOT'] . "/index.php ";
+        $action = "Cron:". $func;
+        $command = $index . $action . $id ? $id : "";
+        
+        $dt = new DateTime();
+        $d = $d->from($time);
+        
+        $cmd = "(crontab -l ; echo \"0 * * * * " .$command ."\") 2>&1 "
+                . "| grep -v \"no crontab\" | sort | uniq | crontab -";
+        
+        shell_exec($cmd);
     }
 }

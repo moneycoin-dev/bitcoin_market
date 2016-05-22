@@ -3,6 +3,7 @@
 namespace App\Model;
 
 use dibi;
+use Nette\Utils\DateTime;
 
 /**
  * 
@@ -62,14 +63,12 @@ class Orders extends BaseModel {
            
         call_user_func(array($q, "where"), $where);
            
-        $q = $q->orderBy("status DESC");
+        $q = $q->orderBy("date_ordered ASC");
+        
+        $status ? $q = $q->orderBy("status DESC") : NULL;
 
         if ($pager){
-            $pager->setItemCount(count($q));
-
-            return $q->limit($pager->getLength())
-                     ->offset($pager->getOffset())
-                     ->fetchAll();       
+            return $this->pgFetch($q, $pager);  
         } else { 
              return $q->fetchAll();
         }     
@@ -145,7 +144,7 @@ class Orders extends BaseModel {
      * @param string $status
      */
     public function changeStatus($id, $status){     
-        $this->upd("orders", array("status" => $status), "order_id", $id);
+        $this->upd("orders", array("status" => $status), array("order_id" => $id));
     }
     
     /**
@@ -153,7 +152,7 @@ class Orders extends BaseModel {
      * @param int $id order id
      */
     public function setShipped($id){
-       $this->upd("orders", array("shipped" => "yes"), "order_id", $id);
+       $this->upd("orders", array("shipped" => "yes"), array("order_id" => $id));
     }
     
     /**
@@ -206,7 +205,7 @@ class Orders extends BaseModel {
      */
     public function finalize($id){
         $this->upd("orders", array("status" => "closed", 
-                                   "finalized" => "yes"), "order_id", $id);
+                                   "finalized" => "yes"), array("order_id" => $id));
     }
     
     /**
@@ -251,7 +250,7 @@ class Orders extends BaseModel {
      */
     public function updateFeedback($oid, $feedback){
         $feedback["time"] = time();
-        $this->upd("feedback", $feedback, "order_id", $oid);
+        $this->upd("feedback", $feedback, array("order_id" => $oid));
     }
     
     /**
@@ -300,41 +299,116 @@ class Orders extends BaseModel {
         return $this->slc($string, "orders", array("order_id" => $id));
     }
     
-    public function saveDisputeContents($order,$message,$timestamp, $autor){
+    /**
+     * Function that saves dispute discussions
+     * @param int $order
+     * @param int $timestamp
+     * @param string $message
+     * @param string $autor
+     */
+    public function saveDisputeContents($order,$timestamp,$message,$autor){
         dibi::insert('disputes', array('order' => $order, 'message' => $message,
             'timestamp' => $timestamp, 'autor' => $autor))->execute();
     }
     
+    /**
+     * Returns all dispute messages
+     * @param int $order
+     * @return DibiResult
+     */
     public function getDisputeContents($order){        
-        return dibi::query("SELECT * FROM [disputes] WHERE `order` = %i ORDER BY "
-                . "timestamp ASC", $order);
+        return dibi::select("*")->from("disputes")
+                                ->where(array("order" => $order))
+                                ->orderBy("timestamp ASC");
     }
     
+    /**
+     * Increments any int field in any table
+     * @param string $table
+     * @param string $what
+     * @param array $where
+     */
     public function incrementor($table, $what, array $where){
          $this->upd($table, array($what => +1), $where);
     }
     
+    /**
+     * Increments fields related to Users table
+     * @param string $what
+     * @param string $login
+     */
     public function usrIncrementor($what, $login){
         $this->incrementor("users", $what, array("login" => $login));
     }
     
+    /**
+     * Increments number of feedback editations
+     * @param int $oid
+     */
     public function fbInc($oid){
         $this->incrementor("feedback", "changed", array("order_id" => $oid));
     }
     
+    /**
+     * Increments user's level
+     * @param string $login
+     */
     public function lvlInc($login){
         $this->usrIncrementor("level", $login);
     }
     
+    /**
+     * Increments user's trust level
+     * @param string $login
+     */
     public function trustInc($login){
         $this->usrIncrementor("trust", $login);
     }
     
+    /**
+     * Increments vendor's sales counter
+     * @param string $login
+     */
     public function saleInc($login){
         $this->usrIncrementor("sales", $login);
     }
     
+    /**
+     * Increments user's purchases counter
+     * @param string $login
+     */
     public function purchaseInc($login){
         $this->usrIncrementor("purchases", $login);
+    }
+    
+    /**
+     * Sets time when order will
+     * automatically finalize and
+     * release funds from escrow.
+     * 
+     * @param int $oid
+     * @return int $fTime
+     */
+    public function setAuFinalizeDate($oid){     
+        $dt =  new DateTime();
+        $time = time();
+        $fTime = $time + ($dt::WEEK * 2);
+        
+        $this->upd("orders", array("auto_finalize" => $fTime), 
+                array("order_id" => $oid));
+        
+        return $fTime;
+    }
+    
+    /**
+     * Change overall and finalized
+     * status of order to TRUE.
+     * Used when buyer takes no action.
+     * 
+     * @param int $oid
+     */
+    public function autoFinalize($oid){
+        $this->upd("orders", array("status" => "closed", "finalized" => "yes"),
+                array("order_id" => $oid));
     }
 }

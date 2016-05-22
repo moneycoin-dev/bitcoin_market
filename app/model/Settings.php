@@ -37,7 +37,7 @@ class Settings extends BaseModel
 
         if ($this->verifyOldPassword($oldpw, $id)) {
             $hash = Passwords::hash($newpw);
-            $this->upd("users", array('password' => $hash), "id", $id);
+            $this->upd("users", array('password' => $hash), array("id" => $id));
         }
     }
 
@@ -49,7 +49,7 @@ class Settings extends BaseModel
             throw new BadPinException('Zadali jste špatně starý pin');
 
         } else {
-            $this->upd("users", array('pin' => $pinnew), "id", $id);
+            $this->upd("users", array('pin' => $pinnew), array("id" => $id));
         }
     }
     
@@ -63,11 +63,11 @@ class Settings extends BaseModel
     }
 
     public function newPgpKey($pubkey, $id){                      
-        $this->upd("users", array("pubkey" => $pubkey), "id", $id);
+        $this->upd("users", array("pubkey" => $pubkey), array("id" => $id));
     }
 
     public function jabberID($jabber, $id){
-        $this->upd("users", array("jabber" => $jabber), "id", $id);
+        $this->upd("users", array("jabber" => $jabber), array("id" => $id));
     }
     
     public function hasFEallowed($login){       
@@ -92,12 +92,9 @@ class Settings extends BaseModel
                 ->where("listings.author = %s", $login);
         
         $type ? $q = $q->where("feedback.type = %s", $type) : TRUE;
-
-        $pager->setItemCount(count($q));
-        
-        return $q->limit($pager->getLength())
-                 ->offset($pager->getOffset())
-                 ->fetchAll();     
+        $q = $q->orderBy("feedback.time DESC");
+       
+        return $this->pgFetch($q, $pager);
     }
 }
 

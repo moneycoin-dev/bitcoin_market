@@ -4,6 +4,7 @@ namespace App;
 
 use Nette;
 use Nette\Application\Routers\RouteList;
+use Nette\Application\Routers\CliRouter;
 use Nette\Application\Routers\Route;
 
 /**
@@ -16,13 +17,19 @@ use Nette\Application\Routers\Route;
 
 class RouterFactory
 {
+
     /**
      * @return Nette\Application\IRouter
      */
     public static function createRouter()
     {
-            $router = new RouteList;
-            $router[] = new Route('<presenter>/<action>[/<id>]', 'Entry:in');
+        $router = new RouteList;
+ 
+            
+        //if ($c->parameters['consoleMode']) {
+            $router[] = new CliRouter(array("action" => "Cron:autoFinalize"));
+       // } else {
+            $router[] = new Route('<presenter>/<action>/[<id>]', 'Entry:in');
             $router[] = new Route('login', 'Login:in');
             $router[] = new Route('listings', 'Listings:in');
             $router[] = new Route('<presenter>/<action>/<id>', 'Listings:EditListing');
@@ -39,7 +46,8 @@ class RouterFactory
             $router[] = new Route('wallet', 'Wallet:in');
             $router[] = new Route('administration', 'Administration:in');
             $router[] = new Route('<presenter>/<action>', 'Administration:Global');
+       // }
 
-            return $router;
+        return $router;
     }
 }

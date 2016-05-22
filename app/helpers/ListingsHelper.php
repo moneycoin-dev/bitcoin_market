@@ -15,25 +15,49 @@ use App\Model\Listings;
  */
 
 class ListingsHelper extends \Nette\Object {
-
-    protected $listings, $settings, $base;
     
+    /** @var App\Model\Listings */
+    protected $listings;
+    
+    /** @var App\Model\Settings */
+    protected $settings;
+    
+    /** @var App\Model\BaseHelper */
+    protected $base;
+    
+    /**
+     * Dependency injection
+     * @param BaseHelper $bh
+     */
     public function injectBase(BaseHelper $bh){
         $this->base = $bh;
     }
 
+    /**
+     * Dependency injection
+     * @param Listings $ls
+     */
     public function injectListings(Listings $ls){
         $this->listings = $ls;
     }
 
+    /**
+     * Dependency injection
+     * @param Settings $s
+     */
     public function injectSettings(Settings $s){
         $this->settings = $s;
     }
 
+    /**
+     * Create & Edit Listing
+     * randomized image uploads.
+     * 
+     * @param array $images
+     * @param Form $form
+     */
     public function imgUpload($images, $form){
-        
-        foreach($images as $image){
-        
+        foreach($images as $image){     
             if ($image->isOk() && $image->isImage()){
                 $filesPath = getcwd() . "/userfiles/" ;
                 $username = $this->base->logn();
@@ -59,22 +83,26 @@ class ListingsHelper extends \Nette\Object {
             }
         }     
     }
-
+    
+    /**
+     * Create array with postage options 
+     * and postage prices, then save it to db
+     * with special function.
+     * 
+     * @param array $values
+     * @param bool $flag
+     * @return array
+     */
     public function returnPostageArray($values, $flag = NULL){
-        //create separate array with postage options and postage prices
         //to later store it in db
-        $postage = $postagePrice = $result = array();
-        
+        $postage = $postagePrice = $result = array();   
         $findPostage = "postage";
         $findPrice = "pprice";
        
-        foreach ($values as $key => $value) {
-            
+        foreach ($values as $key => $value) {         
             if ($flag == NULL){
-                
                 //code for adding postage options
-                //upon listing creation
-                
+                //upon listing creation     
                 if (strpos($key, $findPostage) !== FALSE){
                     array_push($postage, $value);
                 }
@@ -82,11 +110,9 @@ class ListingsHelper extends \Nette\Object {
                 if (strpos($key, $findPrice) !== FALSE){
                     array_push($postagePrice, $value);
                 }
-            } else {
-                
+            } else { 
                 //code for adding postage options
                 //when user wants to edit his listing
-                
                 if (strpos($key, $findPostage) !== FALSE ){
                     if (strchr($key, "X")){
                         array_push($postage, $value);
@@ -106,15 +132,17 @@ class ListingsHelper extends \Nette\Object {
         
         return $result;
     }
-
+    
+    /**
+     * Fills form after submission.
+     * with data from session.
+     * Used when adding postage options.
+     * 
+     * @param Form $form
+     * @param array $values
+     */
     public function fillForm($form , $values){
-        
-        //fills form after submission with previously
-        //entered values
-        //used when adding postage options
-        
-        if (!empty($values)){
-            
+        if (!empty($values)){    
             $iterator = $form->getControls();
             $allControls = iterator_to_array($iterator);
 
@@ -128,6 +156,14 @@ class ListingsHelper extends \Nette\Object {
         }
     }
 
+    /**
+     * Consruct checkboxes for
+     * listing creation, dependent on 
+     * vendor privileges.
+     * 
+     * @param Form $form
+     * @return Nette\Forms\Controls\CheckboxList
+     */
     public function constructCheckboxList($form){
         $listingOptions = array("ms" => "Multisig");
 
@@ -138,8 +174,11 @@ class ListingsHelper extends \Nette\Object {
         return $form->addCheckboxList("listingOptions", "Options", $listingOptions);
     }
 
-    public function formValidateValues($form){
-        
+    /**
+     * Form validation function
+     * @param Form $form
+     */
+    public function formValidateValues($form){   
         $values = $form->getValues(TRUE);
         
         foreach ($values as $value){
@@ -148,9 +187,16 @@ class ListingsHelper extends \Nette\Object {
             }
         }
     }
-
+    
+    /**
+     * Performs value processing to later save in db
+     * Used for, listing create & edit
+     * 
+     * @param array $values
+     * @param bool $type - ifset means edit-listing
+     * @return array
+     */
     public function getProcValues($values, $type = NULL){
-        ///performs value processing to later save in db///  
         //add listing author to values
         $values['author'] = $this->base->logn();
 
@@ -199,12 +245,10 @@ class ListingsHelper extends \Nette\Object {
         
         //remove postage options as they are processed separately
         foreach ($values as $key => $value) {
-
             if (strpos($key, "postage") !== FALSE || strpos($key, "pprice") !== FALSE) {
                 unset($values[$key]);
             }
         }
-
         return $values;
     }
 
@@ -228,10 +272,14 @@ class ListingsHelper extends \Nette\Object {
             "render" => $render));
     }
     
+    /**
+     * Component name comparator called from template.
+     * Serves rendering of delete postage action link.
+     * 
+     * @param string $name
+     * @return boolean
+     */
     public function compareComponentName($name){
-        
-        //component name comparator called from template
-        //serves rendering of delete postage action link
         if (strpos($name, "postage") !== FALSE){    
             if (strpos($name, "add_postage") !== FALSE){
                 return FALSE;
@@ -243,9 +291,16 @@ class ListingsHelper extends \Nette\Object {
         }
     }
     
+    /**
+     * Compares form values
+     * with db values and determines
+     * what to save into db
+     * 
+     * @param array $toUpdate
+     * @param array $fromDB
+     * @return array
+     */
     public function arrayToWrite($toUpdate, $fromDB){
-        
-    //assemble array with new postage values and database ids to edit
         $arrayToWrite = array();
         $cnt = 0;
 
@@ -264,5 +319,21 @@ class ListingsHelper extends \Nette\Object {
         }
         
         return $arrayToWrite;
+    }
+    
+    /**
+     * Listings:view paginated
+     * feedback renderer
+     * 
+     * @param int $id listingID from URL
+     * @param int $page actualPage from URL
+     */
+    public function drawPaginator($id, $page){
+        if ($this->listings->hasFeedback($id)){            
+            $pg = $this->base->paginatorSetup($page, 10);
+            $data = $this->listings->getFeedback($id, $pg);
+            $pgcount = $pg->getPageCount();
+            $this->base->paginatorTemplate("feedback", $data, $pgcount, $page);
+        }
     }
 }

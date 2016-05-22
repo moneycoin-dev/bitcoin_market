@@ -401,10 +401,9 @@ class ListingsPresenter extends ProtectedPresenter {
      * 
      * @param int $id listing id from URL
      */
-    public function actionEditListing($id){
-        
+    public function actionEditListing($id){ 
         $login = $this->hlp->logn();
-                            
+     
         if (!$this->listings->isListingAuthor($id, $login)){     
            $this->redirect("Listings:in");
         }
@@ -473,7 +472,7 @@ class ListingsPresenter extends ProtectedPresenter {
      * 
      * @param int $id Listing id from URL
      */
-    public function actionView($id){
+    public function actionView($id, $page = NULL){
         
         //URL not wanted
         $n = "/listings/view";
@@ -498,7 +497,8 @@ class ListingsPresenter extends ProtectedPresenter {
                 $this->lHelp->sessNcheck($id);
                 $session = $this->hlp->sess("images");
                 $session->listingImages = $this->listings
-                                               ->getListingImages($id);
+                                               ->getListingImages($id);            
+                $this->lHelp->drawPaginator($id, $page ? $page : 1);  
             } else {
                 $this->redirect("Dashboard:in");
             }
@@ -853,7 +853,6 @@ class ListingsPresenter extends ProtectedPresenter {
             
             $lst = $this->hlp->sess("listing");
             $imgs = $this->hlp->sess("images");
-            $this->template->listingID = $lst->listingID;
             $this->template->listingDetails = $lst->listingDetails;
             $this->template->listingImages = $imgs->listingImages;
         }
@@ -870,14 +869,10 @@ class ListingsPresenter extends ProtectedPresenter {
     
     /**
      * Renders Listing view page template variables
-     * @param int $id listing id from URL
      */
-    public function renderView($id){    
+    public function renderView(){    
         if ($this->hlp->sess("listing")->render){
             $this->template->renderBuyForm = TRUE;
-        }
-        if ($this->listings->hasFeedback($id)){
-            $this->template->feedback = $this->listings->getFeedback($id);
         }
     }
     

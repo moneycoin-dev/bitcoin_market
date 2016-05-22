@@ -18,11 +18,14 @@ $configurator->addConfig(__DIR__ . '/config/config.local.neon');
 
 $container = $configurator->createContainer();
 
-$requestFatory = new Nette\Http\RequestFactory;
-$request = $requestFatory->createHttpRequest();
-$response = new Nette\Http\Response;
-$session = new Nette\Http\Session($request, $response);
+//resolves session issue when we are running from CLI
+if(!$container->parameters['consoleMode']){
+    $requestFatory = new Nette\Http\RequestFactory;
+    $request = $requestFatory->createHttpRequest();
+    $response = new Nette\Http\Response;
+    $session = new Nette\Http\Session($request, $response);
 
-captcha\Captcha\CaptchaControl::register($session);
+    captcha\Captcha\CaptchaControl::register($session);
+}
 
 return $container;

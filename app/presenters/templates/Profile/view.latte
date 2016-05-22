@@ -60,7 +60,7 @@
         <td>{$order->feedback_text}</td>
         <td>{$details->quantity}</td>
         <td>{$details->final_price}</td>
-        <td>{$presenter->stripBuyerName($order->buyer)}</td>
+        <td>{$presenter->hlp->stripBuyerName($order->buyer)}</td>
     </tr>
     {/foreach}
     </table>
