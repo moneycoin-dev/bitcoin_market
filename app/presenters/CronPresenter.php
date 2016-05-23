@@ -16,10 +16,10 @@ class CronPresenter extends BasePresenter {
      * Determines if we are running
      * from CLI, otherwise terminates.
      */
-    public function startup(){
-        if (PHP_SAPI !== "cli"){
-            $this->terminate();
-        }
+    public function __construct(){
+        if (PHP_SAPI !== "cli"){            
+           $this->terminate();
+       }
     }
 
     /**
@@ -28,10 +28,13 @@ class CronPresenter extends BasePresenter {
      * 
      * @param int $oid order id
      */
-    public function actionAutoFinalize($oid) {    
+    public function actionAutoFinalize() {  
+        
+        touch("/var/www/html/www/userfiles/kak.txt");
+        
+        $oid = intval($GLOBALS["argv"][2]);
         $vendor = $this->orders->getDetails($oid)["author"];
         $ammount = $this->wallet->getEscrowed_Order($oid);
-        
         $this->wallet->moveAndStore("erelease","escrow",$vendor,$ammount,$oid);
         $this->orders->autoFinalize($oid);  
     }

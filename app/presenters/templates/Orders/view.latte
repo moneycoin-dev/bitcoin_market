@@ -14,34 +14,48 @@ Status: {if $presenter->isShipd() && !$presenter->isClosed()}
             Zpracovává se...
         {/if}
 <br>
-{ifset $fdbk}
-    <a n:href="Orders:Feedback $orderInfo->order_id">Změnit Finalize Early Feedback </a>
-{/ifset}
 
-{* Rendering of forms dependent on database state
-   If order is entirely closed, renders only buyer_notes
-   Otherwise renders full forms. *}
+{if !$presenter->orders->isFe($orderInfo->order_id)}
+    {if $orderInfo->finalized == "no" }
+       {var now = new Nette\Utils\DateTime() }
+       {var dtDb = $now->from($orderInfo->auto_finalize) }
+       {var diff = $now->diff($dtDb) }
+       <br>
+       Tato objednávka bude automaticky finalizována dne: 
+       {$orderInfo->auto_finalize|date:'j. n. Y'} ve {$orderInfo->auto_finalize|date:'H:i'}h
+       <br>
+       Zbývá tedy {$diff->d} dnů {$diff->h} hodin {$diff->i} minut. 
+    {/if}
+{/if}
 
-{if $presenter->isShipd() }
-    {form finalizeForm}
-        <table>
-            {control $form errors}
-        <tr n:foreach="$form->controls as $name => $field">
-            <th>{label $name /}<th>
-            <td>{input $name}</td>
-            {breakIf ($presenter->isClosed() || $presenter->isDispute()) && $name == "buyer_notes"}
+{if $orderInfo->author !== $presenter->hlp->logn()}
+    {ifset $fdbk}
+        <a n:href="Orders:Feedback $orderInfo->order_id">Změnit Finalize Early Feedback </a>
+    {/ifset}
 
-        </tr>
-        </table> 
-    {/form}
-    {if !$presenter->wasReleased() }
-        {if !$presenter->isClosed()}
-            {if !$presenter->isDispute()}
-                {control partialReleaseForm}
+    {* Rendering of forms dependent on database state
+       If order is entirely closed, renders only buyer_notes
+       Otherwise renders full forms. *}
+
+    {if $presenter->isShipd() }
+        {form finalizeForm}
+            <table>
+                {control $form errors}
+            <tr n:foreach="$form->controls as $name => $field">
+                <th>{label $name /}<th>
+                <td>{input $name}</td>
+                {breakIf ($presenter->isClosed() || $presenter->isDispute()) && $name == "buyer_notes"}
+            </tr>
+            </table> 
+        {/form}
+        {if !$presenter->wasReleased() }
+            {if !$presenter->isClosed()}
+                {if !$presenter->isDispute()}
+                    {control partialReleaseForm}
+                {/if}
             {/if}
         {/if}
     {/if}
 {/if}
-    
 {/block}
 

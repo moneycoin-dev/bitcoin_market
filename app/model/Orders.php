@@ -63,7 +63,7 @@ class Orders extends BaseModel {
            
         call_user_func(array($q, "where"), $where);
            
-        $q = $q->orderBy("date_ordered ASC");
+        $q = $q->orderBy("date_ordered DESC");
         
         $status ? $q = $q->orderBy("status DESC") : NULL;
 
@@ -261,7 +261,7 @@ class Orders extends BaseModel {
      * @return int
      */
     public function getFbChanges($oid){
-        return $this->slc("changed", "feedback", "order_id", $oid);
+        return $this->slc("changed", "feedback", array("order_id" => $oid));
     }
     
     /**

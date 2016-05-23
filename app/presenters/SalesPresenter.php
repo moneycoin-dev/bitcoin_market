@@ -133,8 +133,8 @@ class SalesPresenter extends ProtectedPresenter {
                 if ($this->orders->isFe($id)){
                     $this->orders->changeStatus($id, "closed");
                 } else {
-                    $date = $this->orders->setAuFinalizeDate($id);
-                    $this->hlp->newCronJob("autoFinalize", $date, $id);
+                    $date = $this->orders->setAuFinalizeDate($id);            
+                    $this->hlp->scheduleJob("autoFinalize", $date, $id);
                 }
                 
             } else {
@@ -146,7 +146,7 @@ class SalesPresenter extends ProtectedPresenter {
             unset($this->hlp->sess("orders")->orderID);
             
             $this->flashMessage("Objednávka úspěšně vyřízena!");
-            $this->redirect("Sales:in");
+          //  $this->redirect("Sales:in");
         }
     }
     

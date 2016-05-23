@@ -123,23 +123,22 @@ class BaseHelper extends Nette\Object {
     }
     
     /**
-     * Creates new CRON job
-     * on local system.
+     * Schedules new job
+     * for unix "at" program.
      * 
-     * @param type $time
-     * @param type $func
+     * @param int $time timestamp
+     * @param int $id object id to perform action with
      */
-    public function newCronJob($func, $time, $id = NULL){
-        $index = $_SERVER['DOCUMENT_ROOT'] . "/index.php ";
-        $action = "Cron:". $func;
-        $command = $index . $action . $id ? $id : "";
-        
+    public function scheduleJob($action, $time, $id = NULL){         
+        //index routes all cli requests
+        $index = $_SERVER['DOCUMENT_ROOT'] . "/index.php ";    
+        $action = "Cron:".$action;
+        $command = "php " . $index . $action;
+        $id ? $command = $command ." ".$id : "";           
         $dt = new DateTime();
-        $d = $d->from($time);
-        
-        $cmd = "(crontab -l ; echo \"0 * * * * " .$command ."\") 2>&1 "
-                . "| grep -v \"no crontab\" | sort | uniq | crontab -";
-        
-        shell_exec($cmd);
+        $d = $dt->from($time)->format('H:i Y-m-d');
+        $cmd = "echo \"".$command ."\" | at ".$d;        
+        $output = "";
+        exec($cmd . " 2>&1", $output);
     }
 }
